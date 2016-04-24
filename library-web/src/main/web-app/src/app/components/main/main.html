@@ -1,0 +1,22 @@
+<main class="mdl-layout__content">
+  <div class="page-content">
+    <div class="acme-card-wide mdl-card mdl-shadow--2dp">
+      <div class="mdl-card__title">
+        <h2 class="mdl-card__title-text">Welcome to the Library</h2>
+      </div>
+      <div class="mdl-card__supporting-text">
+        You have 0 books in the folder.
+      </div>
+      <div class="mdl-card__actions mdl-card--border">
+        <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">
+          Refresh data
+        </a>
+      </div>
+    </div>
+    <div class="mdl-grid">
+      <div class="mdl-cell mdl-cell--4-col" ng-repeat="awesomeThing in main.awesomeThings | orderBy:'rank'">
+        Item
+      </div>
+    </div>
+  </div>
+</main>

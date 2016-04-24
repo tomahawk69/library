@@ -1,0 +1,13 @@
+<div class="mdl-layout__header-row">
+  <!-- Title -->
+  <a class="mdl-navigation__link" ng-link="main()"><span class="mdl-layout-title mdl-badge" data-badge="÷">Library</span></a>
+  <!-- Add spacer, to align navigation to the right -->
+  <nav class="mdl-navigation mdl-layout--large-screen-only">
+    <a class="mdl-navigation__link" ng-link="dashboard()">Dashboard</a>
+    <a class="mdl-navigation__link" href="#">About</a>
+  </nav>
+  <!-- Add spacer, to align navigation to the right -->
+  <div class="mdl-layout-spacer"></div>
+  <!-- Navigation. We hide it in small screens. -->
+  <span class="mdl-navigation__link">Application was updated {{ vm.relativeDate }}.</span>
+</div>
