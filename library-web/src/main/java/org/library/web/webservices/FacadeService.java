@@ -38,7 +38,7 @@ public class FacadeService {
     @RequestMapping(value = "/stopRefreshData", produces= MediaType.TEXT_HTML_VALUE)
     @CrossOrigin(origins = "http://localhost:3000")
     public @ResponseBody String stopRefreshData() {
-        LOGGER.info("stoRefreshData");
+        LOGGER.info("stopRefreshData");
         libraryController.stopRefreshData();
         return "Refresh is cancelling";
     }
@@ -47,7 +47,7 @@ public class FacadeService {
     @CrossOrigin(origins = "http://localhost:3000")
     public @ResponseBody
     Map<String, Object> getDataStatus() {
-        LOGGER.debug("stoRefreshData");
+        LOGGER.debug("getDataStatus");
         return libraryController.getDataStatus();
     }
 }
