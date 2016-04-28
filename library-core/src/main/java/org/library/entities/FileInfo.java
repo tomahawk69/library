@@ -1,24 +1,33 @@
 package org.library.entities;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.UUID;
 
 public class FileInfo {
-    private final Path path;
+    private final String path;
     private final String fileName;
     private final FileType fileType;
+    private UUID uuid;
     private Long fileSize;
     private LocalDateTime modifiedDate;
     private String md5Hash;
 
-    public FileInfo(Path path) {
-        this.path = path;
-        fileName = path.getFileName().toString();
-        fileType = FileType.fileTypeByExtension(path);
+    public FileInfo(String path) {
+        this(null, path, Paths.get(path).getFileName().toString(), null, null);
     }
 
-    public Path getPath() {
+    public FileInfo(UUID uuid, String path, String fileName, Long fileSize, String md5Hash) {
+        this.uuid = uuid;
+        this.path = path;
+        this.fileName = fileName;
+        this.fileSize = fileSize;
+        this.md5Hash = md5Hash;
+        this.fileType = FileType.fileTypeByExtension(Paths.get(path));
+    }
+
+    public String getPath() {
         return path;
     }
 
@@ -54,6 +63,10 @@ public class FileInfo {
         this.md5Hash = md5Hash;
     }
 
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -61,7 +74,7 @@ public class FileInfo {
 
         FileInfo fileInfo = (FileInfo) o;
 
-        return path.equals(fileInfo.path);
+        return path.equalsIgnoreCase(fileInfo.path);
     }
 
     @Override
@@ -72,9 +85,10 @@ public class FileInfo {
     @Override
     public String toString() {
         return "FileInfo{" +
-                "path=" + path +
+                "path='" + path + '\'' +
                 ", fileName='" + fileName + '\'' +
                 ", fileType=" + fileType +
+                ", uuid=" + uuid +
                 ", fileSize=" + fileSize +
                 ", modifiedDate=" + modifiedDate +
                 ", md5Hash='" + md5Hash + '\'' +

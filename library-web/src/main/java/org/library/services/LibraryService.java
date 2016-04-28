@@ -5,7 +5,10 @@ import org.apache.logging.log4j.Logger;
 import org.library.core.FileUtils;
 import org.library.core.FileUtilsImpl;
 import org.library.entities.FileInfo;
+import org.library.entities.FileUpdateOperation;
 import org.library.web.entities.DataStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -13,11 +16,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.StampedLock;
 
 @Component
@@ -30,15 +35,17 @@ public class LibraryService {
     private DataStatus dataStatus = DataStatus.INITIALIZING;
     private StampedLock dataLock = new StampedLock();
     private List<Path> files;
-    private List<FileInfo> fileInfos;
+    private Map<String, FileInfo> filesInfoMap;
     private ExecutorService executor;
     private List<Future<?>> futures = new ArrayList<>();
+    private AtomicInteger threadCounter = new AtomicInteger();
 
-    public LibraryService() {
-        // TODO Move in parameters
-        path = Paths.get("D:\\projects\\fb2\\~lib");
-        executor = Executors.newFixedThreadPool(25);
+    @Autowired
+    public LibraryService(@Value("${library.path}") String path, @Value("${threads.count}") int threadsCount) {
+        this.path = Paths.get(path);
+        executor = Executors.newFixedThreadPool(threadsCount);
         dataStatus = DataStatus.IDLE;
+        filesInfoMap = new HashMap<>();
     }
 
     public void refreshData() {
@@ -83,10 +90,6 @@ public class LibraryService {
         if (files != null) {
             files.clear();
         }
-        if (fileInfos != null) {
-            fileInfos.clear();
-        }
-        fileInfos = Collections.synchronizedList(new ArrayList<>());
         files = fileUtils.getFilesList(EXTENSIONS, true, path);
         LOGGER.info("Finishing acquire files");
         LOGGER.info("The count of files: " + files.size());
@@ -96,17 +99,12 @@ public class LibraryService {
     private void updateFilesInfo() throws ExecutionException, InterruptedException {
         LOGGER.info("updateFilesInfo started");
         futures = new ArrayList<>();
-        for (Path path : files) {
+        threadCounter.set(0);
+        for (Path filePath : files) {
             if (dataStatus == DataStatus.REFRESH) {
-                FileInfo fileInfo = new FileInfo(path);
                 futures.add(executor.submit(() -> {
                     try {
-                        fileInfos.add(fileInfo);
-                        fileInfo.setFileSize(fileUtils.getFileSize(fileInfo.getPath()));
-                        fileInfo.setModifiedDate(fileUtils.getFileLastModifiedDate(fileInfo.getPath()));
-                        fileInfo.setMd5Hash(fileUtils.getFileMD5Hash(fileInfo.getPath()));
-                        LOGGER.debug("Added " + fileInfo.getPath());
-                        LOGGER.debug(String.format("Updated %d from %d files", fileInfos.size(), files.size()));
+                        proceedFileInfo(filePath);
                     } catch (IOException e) {
                         LOGGER.error(e);
                     } catch (NoSuchAlgorithmException e) {
@@ -124,7 +122,55 @@ public class LibraryService {
                 future.get();
             }
         }
-        LOGGER.debug(String.format("Finally updated %d from %d files", fileInfos.size(), files.size()));
+        LOGGER.debug(String.format("Finally updated %d from %d files", threadCounter.get(), files.size()));
+    }
+
+    private void proceedFileInfo(Path path) throws IOException, NoSuchAlgorithmException {
+        String relativePath = constructRelativePath(this.path, path);
+        Long fileSize = fileUtils.getFileSize(path);
+        LocalDateTime fileDate = fileUtils.getFileLastModifiedDate(path);
+        FileInfo fileInfo = filesInfoMap.get(relativePath);
+        if (fileInfo != null && !validateFileInfo(fileInfo, fileSize, fileDate)) {
+            updateFileInfo(fileInfo, fileSize, fileDate);
+            addFileInfoToUpdate(fileInfo);
+            LOGGER.debug("Updated " + fileInfo.getPath());
+        } else {
+            fileInfo = new FileInfo(relativePath);
+            updateFileInfo(fileInfo, fileSize, fileDate);
+            filesInfoMap.put(fileInfo.getPath(), fileInfo);
+            addFileInfoToInsert(fileInfo);
+            LOGGER.debug("Added " + fileInfo.getPath());
+        }
+        int i = threadCounter.incrementAndGet();
+        LOGGER.debug(String.format("Updated %d from %d files", i, files.size()));
+    }
+
+    private void addFileInfoToInsert(FileInfo fileInfo) {
+        fileInfo.setUuid(UUID.randomUUID());
+        new FileUpdateOperation(FileUpdateOperation.UpdateType.INSERT, fileInfo);
+    }
+
+    private void addFileInfoToUpdate(FileInfo fileInfo) {
+        new FileUpdateOperation(FileUpdateOperation.UpdateType.UPDATE, fileInfo);
+    }
+
+    private void updateFileInfo(FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) throws IOException, NoSuchAlgorithmException {
+        // first set MD5 to avoid false update when MD5 operation return an error
+        fileInfo.setMd5Hash(fileUtils.getFileMD5Hash(constructAbsolutePath(path, Paths.get(fileInfo.getPath()))));
+        fileInfo.setFileSize(fileSize);
+        fileInfo.setModifiedDate(fileDate);
+    }
+
+    public boolean validateFileInfo(FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) {
+        return fileSize.equals(fileInfo.getFileSize()) && fileDate.equals(fileInfo.getModifiedDate());
+    }
+
+    public static Path constructAbsolutePath(Path basePath, Path path) {
+        return basePath.resolve(path).normalize();
+    }
+
+    public static String constructRelativePath(Path basePath, Path path) {
+        return basePath.relativize(path).toString();
     }
 
     protected boolean setDataStatus(DataStatus dataStatus, Long stamp) {
@@ -154,7 +200,7 @@ public class LibraryService {
         Map<String, Object> result = new HashMap<>();
         result.put("status", dataStatus);
         result.put("count", (files == null ? 0 : files.size()));
-        result.put("updated", (fileInfos == null ? 0 : fileInfos.size()));
+        result.put("updated", threadCounter.get());
         return result;
     }
 
