@@ -51,6 +51,10 @@ public class FileInfo {
         return md5Hash;
     }
 
+    public UUID getUUID() {
+        return uuid;
+    }
+
     public void setFileSize(Long fileSize) {
         this.fileSize = fileSize;
     }

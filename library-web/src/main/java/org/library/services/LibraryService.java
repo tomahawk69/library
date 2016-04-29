@@ -2,9 +2,11 @@ package org.library.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.library.core.DataService;
+import org.library.core.DataServiceFileImpl;
 import org.library.core.FileUtils;
-import org.library.core.FileUtilsImpl;
 import org.library.entities.FileInfo;
+import org.library.entities.FileInfoHelper;
 import org.library.entities.FileUpdateOperation;
 import org.library.web.entities.DataStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +32,6 @@ import java.util.concurrent.locks.StampedLock;
 public class LibraryService {
     private static final Logger LOGGER = LogManager.getLogger(LibraryService.class);
     private static final List<String> EXTENSIONS = Arrays.asList(".fb2", ".epub", ".zip");
-    private FileUtils fileUtils = new FileUtilsImpl();
     private final Path path;
     private DataStatus dataStatus = DataStatus.INITIALIZING;
     private StampedLock dataLock = new StampedLock();
@@ -41,11 +42,15 @@ public class LibraryService {
     private AtomicInteger threadCounter = new AtomicInteger();
 
     @Autowired
+    private DataService dataService = new DataServiceFileImpl();
+
+    @Autowired
     public LibraryService(@Value("${library.path}") String path, @Value("${threads.count}") int threadsCount) {
         this.path = Paths.get(path);
         executor = Executors.newFixedThreadPool(threadsCount);
         dataStatus = DataStatus.IDLE;
         filesInfoMap = new HashMap<>();
+        dataService.setLibraryPath(this.path);
     }
 
     public void refreshData() {
@@ -90,7 +95,7 @@ public class LibraryService {
         if (files != null) {
             files.clear();
         }
-        files = fileUtils.getFilesList(EXTENSIONS, true, path);
+        files = FileUtils.getFilesList(EXTENSIONS, true, path);
         LOGGER.info("Finishing acquire files");
         LOGGER.info("The count of files: " + files.size());
         updateFilesInfo();
@@ -126,17 +131,18 @@ public class LibraryService {
     }
 
     private void proceedFileInfo(Path path) throws IOException, NoSuchAlgorithmException {
-        String relativePath = constructRelativePath(this.path, path);
-        Long fileSize = fileUtils.getFileSize(path);
-        LocalDateTime fileDate = fileUtils.getFileLastModifiedDate(path);
+        String relativePath = FileUtils.constructRelativePath(this.path, path).toString();
+        Long fileSize = FileUtils.getFileSize(path);
+        LocalDateTime fileDate = FileUtils.getFileLastModifiedDate(path);
         FileInfo fileInfo = filesInfoMap.get(relativePath);
         if (fileInfo != null && !validateFileInfo(fileInfo, fileSize, fileDate)) {
-            updateFileInfo(fileInfo, fileSize, fileDate);
-            addFileInfoToUpdate(fileInfo);
+            FileInfo rollbackCopy = FileInfoHelper.createFileInfoCopy(fileInfo);
+            FileInfoHelper.updateFileInfo(this.path, fileInfo, fileSize, fileDate);
+            addFileInfoToUpdate(fileInfo, rollbackCopy);
             LOGGER.debug("Updated " + fileInfo.getPath());
         } else {
             fileInfo = new FileInfo(relativePath);
-            updateFileInfo(fileInfo, fileSize, fileDate);
+            FileInfoHelper.updateFileInfo(this.path, fileInfo, fileSize, fileDate);
             filesInfoMap.put(fileInfo.getPath(), fileInfo);
             addFileInfoToInsert(fileInfo);
             LOGGER.debug("Added " + fileInfo.getPath());
@@ -150,27 +156,12 @@ public class LibraryService {
         new FileUpdateOperation(FileUpdateOperation.UpdateType.INSERT, fileInfo);
     }
 
-    private void addFileInfoToUpdate(FileInfo fileInfo) {
-        new FileUpdateOperation(FileUpdateOperation.UpdateType.UPDATE, fileInfo);
-    }
-
-    private void updateFileInfo(FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) throws IOException, NoSuchAlgorithmException {
-        // first set MD5 to avoid false update when MD5 operation return an error
-        fileInfo.setMd5Hash(fileUtils.getFileMD5Hash(constructAbsolutePath(path, Paths.get(fileInfo.getPath()))));
-        fileInfo.setFileSize(fileSize);
-        fileInfo.setModifiedDate(fileDate);
+    private void addFileInfoToUpdate(FileInfo fileInfo, FileInfo rollbackCopy) {
+        new FileUpdateOperation(FileUpdateOperation.UpdateType.UPDATE, fileInfo, rollbackCopy);
     }
 
     public boolean validateFileInfo(FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) {
         return fileSize.equals(fileInfo.getFileSize()) && fileDate.equals(fileInfo.getModifiedDate());
-    }
-
-    public static Path constructAbsolutePath(Path basePath, Path path) {
-        return basePath.resolve(path).normalize();
-    }
-
-    public static String constructRelativePath(Path basePath, Path path) {
-        return basePath.relativize(path).toString();
     }
 
     protected boolean setDataStatus(DataStatus dataStatus, Long stamp) {

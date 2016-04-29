@@ -1,14 +1,11 @@
 package org.library.entities;
 
-import org.library.core.FileUtilsImpl;
+import org.library.core.FileUtils;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Iurii on 24.04.2016.
- */
 public enum FileType {
     FB2(".fb2", false), EPUB(".epub", false), ZIP("zip", true);
 
@@ -37,7 +34,7 @@ public enum FileType {
     }
 
     public static FileType fileTypeByExtension(Path path) {
-        String extension = FileUtilsImpl.getPathExtWithDot(path);
+        String extension = FileUtils.getPathExtWithDot(path);
         for (FileType fileType : values()) {
             if (fileType.getExtension().equalsIgnoreCase(extension)) {
                 return fileType;

@@ -12,7 +12,7 @@ public class LibraryServiceTest {
 
     @Test
     public void testSetDataStatus() throws Exception {
-        LibraryService libraryService = new LibraryService();
+        LibraryService libraryService = new LibraryService("", 1);
         DataStatus dataStatus = DataStatus.IDLE;
         libraryService.setDataStatus(dataStatus, null);
         DataStatus resultDataStatus = (DataStatus) libraryService.getDataStatus().get("status");
@@ -23,7 +23,7 @@ public class LibraryServiceTest {
     @Ignore
     // TODO fix after implement path parameter
     public void testSetDataStatusAfterRead() throws Exception {
-        LibraryService libraryService = new LibraryService();
+        LibraryService libraryService = new LibraryService("", 1);
         libraryService.refreshData();
         Map<String, Object> resultDataStatus = libraryService.getDataStatus();
         assertEquals(DataStatus.REFRESH, resultDataStatus.get("status"));
