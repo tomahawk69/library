@@ -27,6 +27,10 @@ Active functions:
 2. Dashboard has "Refresh" button to get/update information from the specified folder. Folder is now hardcoded in application  
 3. Dashboard has "Stop refresh" button to stop refresh  
 4. Dashboard has "Enable debug messages" switch  
-5. Footer has information about backend and data state  
+5. Footer has information about backend and data state
+6. Update stored files data in the .db file in the root of library
 
 Logging properties (info by default) are in library-core\src\main\resources\log4j2.xml
+
+Roadmap:
+1. Implement "update" operation

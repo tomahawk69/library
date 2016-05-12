@@ -15,15 +15,16 @@ public class FileInfo {
     private String md5Hash;
 
     public FileInfo(String path) {
-        this(null, path, Paths.get(path).getFileName().toString(), null, null);
+        this(null, path, Paths.get(path).getFileName().toString(), null, null, null);
     }
 
-    public FileInfo(UUID uuid, String path, String fileName, Long fileSize, String md5Hash) {
+    public FileInfo(UUID uuid, String path, String fileName, Long fileSize, LocalDateTime modifiedDate, String md5Hash) {
         this.uuid = uuid;
         this.path = path;
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.md5Hash = md5Hash;
+        this.modifiedDate = modifiedDate;
         this.fileType = FileType.fileTypeByExtension(Paths.get(path));
     }
 

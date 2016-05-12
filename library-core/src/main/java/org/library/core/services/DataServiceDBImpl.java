@@ -1,17 +1,28 @@
 package org.library.core.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.library.core.dao.DataStorage;
 import org.library.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component("dataServiceDBImpl")
 public class DataServiceDBImpl extends AbstractDataService{
+    private final DataStorage dataStorage;
+    private static final Logger LOGGER = LogManager.getLogger(DataServiceDBImpl.class);
+
+    @Autowired
+    public DataServiceDBImpl(DataStorage dataStorage) {
+        this.dataStorage = dataStorage;
+    }
 
     @Override
     public void insert(FileInfo fileInfo) {
@@ -52,16 +63,54 @@ public class DataServiceDBImpl extends AbstractDataService{
 
     @Override
     public List<FileUpdateOperation> commit() {
-        // TODO commit stuff here
+        LOGGER.info("commit started");
+        try {
+            dataStorage.createConnection();
+            dataStorage.clearData();
+            for (FileUpdateOperation fileUpdateOperation : queue) {
+                synchronized (fileUpdateOperation.getFileInfo()) {
+                    switch (fileUpdateOperation.getUpdateType()) {
+                        case INSERT:
+                            dataStorage.insert(fileUpdateOperation.getFileInfo());
+                            break;
+                        case UPDATE:
+                            dataStorage.update(fileUpdateOperation.getFileInfo());
+                            break;
+                        case DELETE:
+                            dataStorage.delete(fileUpdateOperation.getFileInfo());
+                            break;
+                        default:
+                            throw new Exception("Unknown operation type: " + fileUpdateOperation.getUpdateType());
+                    }
+                }
+                fileUpdateOperation.setSuccess();
+            }
+        } catch (Exception ex) {
+            LOGGER.error(ex);
+        } finally {
+            dataStorage.closeConnection();
+        }
         List<FileUpdateOperation> result = getFailedOperationsAndClearQueue();
+        LOGGER.info("commit done, failed " + result.size());
         return result;
     }
 
     @Override
     public List<FileUpdateOperation> rollback() {
-        // TODO: stop mechanism should be implemented there
         List<FileUpdateOperation> result = getFailedOperationsAndClearQueue();
         return result;
+    }
+
+    @Override
+    public void setLibraryPath(Path libraryPath) {
+        LOGGER.info("setLibraryPath to " + libraryPath);
+        this.libraryPath = libraryPath;
+        try {
+            dataStorage.setDbPath(libraryPath);
+        } catch (SQLException ex) {
+            // TODO properly handle exception
+            LOGGER.error(ex);
+        }
     }
 
     private List<FileUpdateOperation> getFailedOperationsAndClearQueue() {
