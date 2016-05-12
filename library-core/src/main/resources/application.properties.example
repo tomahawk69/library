@@ -1,0 +1,4 @@
+library.path=c:\\temp\\data
+threads.count=25
+spring.main.banner_mode=off
+server.port=8083

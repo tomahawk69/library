@@ -1,18 +1,26 @@
 # library
 Backend: Java 8, Spring Boot
-Front-end: bower, nodeJS, gulp, AngularJS
+Front-end: bower, nodeJS, gulp, AngularJS, Material Design
 
 How start backend:
-1) clean + install library-core
-2) clean + spring-boot:run or library-web\mvnw.cmd "spring-boot:run" -Dmaven.repo.local=<path-to-local repository>
-3) app should start on port 8080
+1) clean + install library-common
+2) go to library-core/src/main/resources
+3) copy application.properties.example to application.properties if last doesn't exist
+4) update params in application.properties
+5) clean + spring-boot:run on library-core or library-core\mvnw.cmd "spring-boot:run" -Dmaven.repo.local=<path-to-local repository>
+6) web-app should start on port 8083 (default port may be changed in application.properties)
 
-How to start front-end:
+How to prepare front-end:
 1) install npm
 2) npm install -g yo gulp
-3) bower install
-4) gulp serve
-5) front-end should start on port 3000  
+3) go to library-web/web-app
+4) bower install
+5) npm install
+
+How to start front-end:
+1) go to library-web/web-app
+2) gulp serve
+3) front-end should start on port 3000
 
 Active functions:
 1) Frontend with Main and Dashboard views

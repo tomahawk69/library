@@ -1,0 +1,25 @@
+<div layout="column">
+  <div flex>
+    <h1>Hello {{dashboard.name}}!</h1>
+  </div>
+  <div flex layout="row">
+    <div flex>
+      <md-button class="md-raised md-primary"
+                 ng-disabled="!dashboard.isRefreshEnabled()"
+                 ng-click="dashboard.refreshData()">
+        Refresh data
+      </md-button>
+      <br/>
+      <md-button class="md-raised md-primary"
+                 ng-if="dashboard.isDataProcessing()"
+                 ng-click="dashboard.stopRefreshData()">
+        Stop refresh
+      </md-button>
+    </div>
+    <div flex>
+      <md-switch ng-model="dashboard.data.debugEnabled" aria-label="Enable debug messages" ng-change="dashboard.setDebugEnabled()">
+        Enable debug messages
+      </md-switch>
+    </div>
+  </div>
+</div>

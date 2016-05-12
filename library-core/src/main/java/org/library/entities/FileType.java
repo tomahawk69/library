@@ -1,6 +1,6 @@
 package org.library.entities;
 
-import org.library.core.FileUtils;
+import org.library.core.utils.FileUtils;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

@@ -1,0 +1,125 @@
+<!doctype html>
+<html ng-app="libraryWebClient">
+<head>
+  <meta charset="utf-8">
+  <title>libraryWebClient</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
+  <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+
+  <!-- build:css({.tmp/serve,src}) styles/vendor.css -->
+  <!-- bower:css -->
+  <!-- run `gulp inject` to automatically populate bower styles dependencies -->
+  <!-- endbower -->
+  <!-- endbuild -->
+
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!-- build:css({.tmp/serve,src}) styles/app.css -->
+  <!-- inject:css -->
+  <!-- css files will be automatically insert here -->
+  <!-- endinject -->
+  <!-- endbuild -->
+</head>
+<body>
+<!--[if lt IE 10]>
+<p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade
+  your browser</a> to improve your experience.</p>
+<![endif]-->
+
+<div class="wrapper" ng-controller="AppController as appController">
+
+  <md-toolbar class="app-toolbar md-indigo-theme md-whiteframe-z2 fix-top">
+    <div class="md-toolbar-tools" tabindex="0">
+      <md-button class="md-icon-button" ng-click="appController.toggleLeft()" aria-label="Toggle Menu" class="md-primary" hide-gt-md>
+        <md-icon md-font-icon="menu">menu</md-icon>
+        <md-tooltip>
+          Меню
+        </md-tooltip>
+      </md-button>
+      <h2>
+        <span>Library</span>
+      </h2>
+    </div>
+  </md-toolbar>
+  <md-sidenav class="md-sidenav-left md-whiteframe-z2" md-component-id="left">
+    <md-toolbar>
+      <h1 class="md-toolbar-tools">Menu</h1>
+    </md-toolbar>
+    <md-content layout-padding>
+      <md-card>
+        <md-card-title>
+          <md-card-title-text>
+            <span class="md-headline">Action buttons</span>
+          </md-card-title-text>
+        </md-card-title>
+        <md-card-content>
+          <p>
+            The quick brown fox jumps over the lazy dog
+          </p>
+          <p>
+            The quick brown fox jumps over the lazy dog
+          </p>
+          <p>
+            The quick brown fox jumps over the lazy dog
+          </p>
+        </md-card-content>
+        <md-card-actions layout="column" layout-align="center end">
+          <md-button class="md-icon-button right" ng-click="appController.closeSideBar()" aria-label="Hide Menu" class="md-primary"
+                     hide-gt-md>
+            <md-icon md-font-icon="close">close</md-icon>
+            <md-tooltip>
+              Меню
+            </md-tooltip>
+          </md-button>
+        </md-card-actions>
+      </md-card>
+      <div layout="column" ng-controller="RouterController">
+        <md-button ng-link="main" ng-click="appController.closeSideBar()">Library</md-button>
+        <md-button ng-link="dashboard" ng-click="appController.closeSideBar()">Dashboard</md-button>
+        <md-button ng-disabled="true">About</md-button>
+      </div>
+    </md-content>
+
+  </md-sidenav>
+
+  <div ng-viewport ng-controller="RouterController"></div>
+
+</div>
+
+<div class="footer" ng-controller="DashboardController as dashboard">
+  <md-toolbar class="md-whiteframe-z2 fix-bottom">
+    <div class="md-toolbar-tools" layout="row">
+      <div flex="50">
+        Copyright by Tomahawk
+      </div>
+      <div flex="50" layout="row">
+        <div ng-if="dashboard.isDataProcessing()" flex>{{dashboard.data.status.updated}}
+          of
+          {{dashboard.data.status.count}}
+        </div>
+        <div class="padding-left right" flex>{{dashboard.data.status.status}}</div>
+      </div>
+    </div>
+  </md-toolbar>
+</div>
+
+
+<!-- build:js(src) scripts/vendor.js -->
+<!-- bower:js -->
+<!-- run `gulp inject` to automatically populate bower script dependencies -->
+<!-- endbower -->
+<!-- endbuild -->
+
+<!-- build:js({.tmp/serve,.tmp/partials,src}) scripts/app.js -->
+<!-- inject:js -->
+<!-- js files will be automatically insert here -->
+<!-- endinject -->
+
+<!-- inject:partials -->
+<!-- angular templates will be automatically converted in js and inserted here -->
+<!-- endinject -->
+<!-- endbuild -->
+
+</body>
+</html>

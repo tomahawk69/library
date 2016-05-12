@@ -3,6 +3,7 @@ package org.library.core;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.library.core.utils.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -20,8 +21,8 @@ public class fileUtilsImplTest {
 
     @Test
     public void testCreateFilterDirectory() throws Exception {
-        List<String> extensions = asList(new String("test"), new String("test1"), new String("..test3"));
-        DirectoryStream.Filter filter = FileUtils.createFilter(extensions, true);
+        List<String> extensions = asList("test", "test1", "..test3");
+        DirectoryStream.Filter<Path> filter = FileUtils.createFilter(extensions, true);
 
         Path dirPath = tempDir.newFolder().toPath();
         assertEquals(filter.accept(dirPath), true);
@@ -29,8 +30,8 @@ public class fileUtilsImplTest {
 
     @Test
     public void testCreateFilterDirectoryNegative() throws Exception {
-        List<String> extensions = asList(new String("test"), new String("test1"), new String("..test3"));
-        DirectoryStream.Filter filter = FileUtils.createFilter(extensions, false);
+        List<String> extensions = asList("test", "test1", "..test3");
+        DirectoryStream.Filter<Path> filter = FileUtils.createFilter(extensions, false);
 
         Path dirPath = tempDir.newFolder().toPath();
         assertEquals(filter.accept(dirPath), false);
@@ -39,8 +40,8 @@ public class fileUtilsImplTest {
     @Test
     public void testCreateFilterFilePositive() throws Exception {
         String ext = ".tesT1";
-        List<String> extensions = asList(new String("test"), new String("....Test1"), new String("..test3"));
-        DirectoryStream.Filter filter = FileUtils.createFilter(extensions, false);
+        List<String> extensions = asList("test", "....Test1", "..test3");
+        DirectoryStream.Filter<Path> filter = FileUtils.createFilter(extensions, false);
 
         Path dirPath = tempDir.newFile("test1......" + ext).toPath();
         assertEquals(filter.accept(dirPath), true);
@@ -49,8 +50,8 @@ public class fileUtilsImplTest {
     @Test
     public void testCreateFilterFilePositiveAllFilesInFilter() throws Exception {
         String ext = ".tesT1";
-        List<String> extensions = asList(new String("test"), new String("*"));
-        DirectoryStream.Filter filter = FileUtils.createFilter(extensions, false);
+        List<String> extensions = asList("test", "*");
+        DirectoryStream.Filter<Path> filter = FileUtils.createFilter(extensions, false);
 
         Path dirPath = tempDir.newFile("test1......" + ext).toPath();
         assertEquals(filter.accept(dirPath), true);
@@ -58,8 +59,8 @@ public class fileUtilsImplTest {
 
     @Test
     public void testCreateFilterFileNegativeNoExt() throws Exception {
-        List<String> extensions = asList(new String("test"), new String("test1"), new String("..test3"));
-        DirectoryStream.Filter filter = FileUtils.createFilter(extensions, false);
+        List<String> extensions = asList("test", "test1", "..test3");
+        DirectoryStream.Filter<Path> filter = FileUtils.createFilter(extensions, false);
 
         Path dirPath = tempDir.newFile("test1").toPath();
         assertEquals(filter.accept(dirPath), false);
@@ -68,8 +69,8 @@ public class fileUtilsImplTest {
     @Test
     public void testCreateFilterFileNegativeNoFilter() throws Exception {
         String ext = ".test11";
-        List<String> extensions = asList(new String("test"), new String("test1"), new String("..test3"));
-        DirectoryStream.Filter filter = FileUtils.createFilter(extensions, false);
+        List<String> extensions = asList("test", "test1", "..test3");
+        DirectoryStream.Filter<Path> filter = FileUtils.createFilter(extensions, false);
 
         Path dirPath = tempDir.newFile("test1" + ext).toPath();
         assertEquals(filter.accept(dirPath), false);
@@ -97,24 +98,25 @@ public class fileUtilsImplTest {
         String ext = ".test";
         String ext1 = ".TEST";
         String ext2 = ".test1";
-        List<String> extensions = asList(ext);
+        List<String> extensions = asList(ext, ext1);
         Path path1 = Paths.get(tempDir.newFile("first" + ext).getAbsolutePath());
-        Path path2 = Paths.get(tempDir.newFile("second" + ext).getAbsolutePath());
+        tempDir.newFile("second" + ext2);
         Path path3 = Paths.get(tempDir.newFile("third" + ext1).getAbsolutePath());
-        Path path4 = Paths.get(tempDir.newFile("fourth" + ext2).getAbsolutePath());
-        List<Path> expectedResult = asList(path1, path2, path3);
+        tempDir.newFile("fourth" + ext2);
+        List<Path> expectedResult = asList(path1, path3);
         List<Path> result = FileUtils.getFilesList(extensions, false, tempDir.getRoot().toPath());
         assertEquals(expectedResult, result);
     }
 
     @Test
     public void testGetFilesListRecursive() throws IOException {
-        String ext = ".test1";
         String folderName = "testFolder";
-        List<String> extensions = asList(ext);
+        String ext1 = ".test1";
+        String ext2 = ".test2";
+        List<String> extensions = asList(ext1, ext2);
         tempDir.newFolder(folderName);
-        Path path1 = Paths.get(tempDir.newFile("first" + ext).getAbsolutePath());
-        Path path2 = Paths.get(tempDir.newFile(folderName + "/second" + ext).getAbsolutePath());
+        Path path1 = Paths.get(tempDir.newFile("first" + ext1).getAbsolutePath());
+        Path path2 = Paths.get(tempDir.newFile(folderName + "/second" + ext2).getAbsolutePath());
         List<Path> expectedResult = asList(path1, path2);
         List<Path> result = FileUtils.getFilesList(extensions, true, tempDir.getRoot().toPath());
         assertEquals(expectedResult, result);
