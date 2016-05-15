@@ -1,4 +1,8 @@
 library.path=c:\\temp\\data
-threads.count=25
+settings.path=c:\\temp\\settings
+threads.global.count=100
+threads.files.count=25
+library.data.service.type=db
+library.data.storage.type=sqlite
 spring.main.banner_mode=off
 server.port=8083

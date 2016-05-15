@@ -20,11 +20,14 @@ public class FileInfoHelper {
     }
 
     public static void updateFileInfo(Path path, FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) throws IOException, NoSuchAlgorithmException {
-        // first set MD5 to avoid false update when MD5 operation return an error
+        // first set MD5 to avoid false batchUpdateFileInfo when MD5 operation return an error
         fileInfo.setMd5Hash(FileUtils.getFileMD5Hash(FileUtils.constructAbsolutePath(path, Paths.get(fileInfo.getPath()))));
         fileInfo.setFileSize(fileSize);
         fileInfo.setModifiedDate(fileDate);
     }
 
 
+    public static boolean checkFileInfoChanged(FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) {
+        return fileSize.equals(fileInfo.getFileSize()) && fileDate.equals(fileInfo.getModifiedDate());
+    }
 }

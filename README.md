@@ -34,3 +34,6 @@ Logging properties (info by default) are in library-core\src\main\resources\log4
 
 Roadmap:
 1. Implement "update" operation
+2. Implement "delete" operation
+3. Implement backups
+4. Move to one of DB frameworks

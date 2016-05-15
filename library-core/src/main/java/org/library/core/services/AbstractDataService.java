@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractDataService  implements DataService {
-    final List<FileUpdateOperation> queue = new ArrayList<>();
-    Path libraryPath;
+    protected final List<FileUpdateOperation> queue = new ArrayList<>();
+    protected Path databasePath;
 
     public int getQueueSize() {
         return queue.size();
@@ -21,8 +21,8 @@ public abstract class AbstractDataService  implements DataService {
     }
 
     @Override
-    public void setLibraryPath(Path libraryPath) {
-        this.libraryPath = libraryPath;
+    public void setDatabasePath(Path libraryPath) {
+        this.databasePath = libraryPath;
     }
 
 }

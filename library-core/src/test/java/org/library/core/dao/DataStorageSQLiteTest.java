@@ -4,6 +4,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.library.core.utils.DateUtils;
 import org.library.entities.FileInfo;
 
 import java.nio.file.Files;
@@ -17,7 +18,7 @@ import java.util.UUID;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-public class DataStorageSQLLiteTest {
+public class DataStorageSQLiteTest {
 
     @Rule
     public TemporaryFolder tempDir = new TemporaryFolder();
@@ -28,15 +29,16 @@ public class DataStorageSQLLiteTest {
     @Test
     public void testIntegration() throws Exception {
         Path folder = tempDir.newFolder("db_folder").toPath();
-        DataStorageSQLLite service = new DataStorageSQLLite();
+        DataStorageSQLite service = new DataStorageSQLite();
         service.setDbPath(folder);
-        boolean result = Files.exists(Paths.get(folder.toString(), DataStorageSQLLite.DB_NAME));
+        service.prepareDB();
+        boolean result = Files.exists(Paths.get(folder.toString(), DataStorageSQLite.DB_NAME));
         assertTrue("DB should exists", result);
     }
 
     @Test
     public void testCreateConnection() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         String mockUrl = "test url";
 
         doReturn(mockUrl).when(service).getDBUrl();
@@ -49,7 +51,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testCreateStructure() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
 
         Connection mockConnection = mock(Connection.class);
         doReturn(mockConnection).when(service).getConnection();
@@ -61,17 +63,17 @@ public class DataStorageSQLLiteTest {
         service.prepareDB();
         service.createStructure();
 
-        verify(mockStatement).executeUpdate(DataStorageSQLLite.createTableSQL);
-        verify(mockStatement).executeUpdate(DataStorageSQLLite.createIndexSQL);
+        verify(mockStatement).executeUpdate(DataStorageSQLite.createTableSQL);
+        verify(mockStatement).executeUpdate(DataStorageSQLite.createIndexSQL);
     }
 
     @Test
     public void testUpdateStructurePositive() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
 
         Connection mockConnection = mock(Connection.class);
         doReturn(mockConnection).when(service).getConnection();
-        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLLite.checkTableSQL);
+        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableSQL);
         doNothing().when(service).createStructure();
 
         service.prepareDB();
@@ -81,11 +83,11 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testUpdateStructureNegative() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
 
         Connection mockConnection = mock(Connection.class);
         doReturn(mockConnection).when(service).getConnection();
-        doReturn(1).when(service).executeOneSelectStatement(DataStorageSQLLite.checkTableSQL);
+        doReturn(1).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableSQL);
         doNothing().when(service).createStructure();
 
         service.prepareDB();
@@ -95,7 +97,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testUpdate() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         FileInfo fileInfo = new FileInfo(UUID.randomUUID(), "path", "fileName", 1L, LocalDateTime.now(), null);
 
         Connection mockConnection = mock(Connection.class);
@@ -103,18 +105,19 @@ public class DataStorageSQLLiteTest {
         doNothing().when(service).updateStructure();
 
         PreparedStatement mockStatement = mock(PreparedStatement.class);
-        doReturn(mockStatement).when(mockConnection).prepareStatement(DataStorageSQLLite.updateSQL);
+        doReturn(mockStatement).when(mockConnection).prepareStatement(DataStorageSQLite.updateFileInfoSQL);
         doReturn(1).when(mockStatement).executeUpdate();
 
         service.prepareDB();
-        service.update(fileInfo);
+        service.prepareBatch(false);
+        service.batchUpdateFileInfo(fileInfo);
 
         verify(mockStatement).executeUpdate();
     }
 
     @Test
     public void testExecuteOneSelectStatementPositive() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         String sql = "test sql";
         Object expectedResult = new Object();
 
@@ -142,7 +145,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testExecuteOneSelectStatementNegative() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         String sql = "test sql";
 
         Connection mockConnection = mock(Connection.class);
@@ -162,7 +165,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testExecuteOneSelectStatementWrongQueryLesser() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         String sql = "test sql";
 
         Connection mockConnection = mock(Connection.class);
@@ -186,7 +189,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testExecuteOneSelectStatementWrongQueryGreater() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         String sql = "test sql";
 
         Connection mockConnection = mock(Connection.class);
@@ -210,7 +213,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testExecuteOneSelectStatementWrongQueryMoreThanOneRecord() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         String sql = "test sql";
 
         Connection mockConnection = mock(Connection.class);
@@ -236,7 +239,7 @@ public class DataStorageSQLLiteTest {
 
     @Test
     public void testInsert() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         FileInfo fileInfo = new FileInfo(UUID.randomUUID(), "path", "fileName", 1L, LocalDateTime.now(), null);
 
         Connection mockConnection = mock(Connection.class);
@@ -244,18 +247,19 @@ public class DataStorageSQLLiteTest {
         doNothing().when(service).updateStructure();
 
         PreparedStatement mockStatement = mock(PreparedStatement.class);
-        doReturn(mockStatement).when(mockConnection).prepareStatement(DataStorageSQLLite.insertSQL);
+        doReturn(mockStatement).when(mockConnection).prepareStatement(DataStorageSQLite.insertFileInfoSQL);
         doReturn(1).when(mockStatement).executeUpdate();
 
         service.prepareDB();
-        service.insert(fileInfo);
+        service.prepareBatch(false);
+        service.batchInsertFileInfo(fileInfo);
 
         verify(mockStatement).executeUpdate();
     }
 
     @Test
     public void testDelete() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         FileInfo fileInfo = new FileInfo(UUID.randomUUID(), "path", "fileName", 1L, LocalDateTime.now(), null);
 
         Connection mockConnection = mock(Connection.class);
@@ -263,18 +267,19 @@ public class DataStorageSQLLiteTest {
         doNothing().when(service).updateStructure();
 
         PreparedStatement mockStatement = mock(PreparedStatement.class);
-        doReturn(mockStatement).when(mockConnection).prepareStatement(DataStorageSQLLite.deleteSQL);
+        doReturn(mockStatement).when(mockConnection).prepareStatement(DataStorageSQLite.deleteFileInfoSQL);
         doReturn(1).when(mockStatement).executeUpdate();
 
         service.prepareDB();
-        service.delete(fileInfo);
+        service.prepareBatch(false);
+        service.batchDeleteFileInfo(fileInfo);
 
         verify(mockStatement).executeUpdate();
     }
 
     @Test
     public void testGetList() throws Exception {
-        DataStorageSQLLite service = spy(new DataStorageSQLLite());
+        DataStorageSQLite service = spy(new DataStorageSQLite());
         FileInfo fileInfo1 = new FileInfo(UUID.randomUUID(), "path1", "fileName1", 1L, LocalDateTime.now(), "hash1");
         FileInfo fileInfo2 = new FileInfo(UUID.randomUUID(), "path2", "fileName2", 2L, LocalDateTime.now(), "hash2");
 
@@ -285,24 +290,24 @@ public class DataStorageSQLLiteTest {
         Statement mockStatement = mock(Statement.class);
         doReturn(mockStatement).when(mockConnection).createStatement();
         ResultSet mockResultSet = mock(ResultSet.class);
-        doReturn(mockResultSet).when(mockStatement).executeQuery(DataStorageSQLLite.getListSQL);
+        doReturn(mockResultSet).when(mockStatement).executeQuery(DataStorageSQLite.getFileInfoListSQL);
 
         when(mockResultSet.next()).thenReturn(true, true, false);
-        when(mockResultSet.getString(DataStorageSQLLite.Fields.UUID_FIELD.getDbFieldName()))
+        when(mockResultSet.getString(DataStorageSQLite.Fields.UUID_FIELD.getDbFieldName()))
                 .thenReturn(fileInfo1.getUUID().toString(), fileInfo2.getUUID().toString());
-        when(mockResultSet.getString(DataStorageSQLLite.Fields.FILE_PATH_FIELD.getDbFieldName()))
+        when(mockResultSet.getString(DataStorageSQLite.Fields.FILE_PATH_FIELD.getDbFieldName()))
                 .thenReturn(fileInfo1.getPath(), fileInfo2.getPath());
-        when(mockResultSet.getString(DataStorageSQLLite.Fields.FILE_NAME_FIELD.getDbFieldName()))
+        when(mockResultSet.getString(DataStorageSQLite.Fields.FILE_NAME_FIELD.getDbFieldName()))
                 .thenReturn(fileInfo1.getFileName(), fileInfo2.getFileName());
-        when(mockResultSet.getLong(DataStorageSQLLite.Fields.FILE_SIZE_FIELD.getDbFieldName()))
+        when(mockResultSet.getLong(DataStorageSQLite.Fields.FILE_SIZE_FIELD.getDbFieldName()))
                 .thenReturn(fileInfo1.getFileSize(), fileInfo2.getFileSize());
-        when(mockResultSet.getString(DataStorageSQLLite.Fields.FILE_DATE_FIELD.getDbFieldName()))
-                .thenReturn(DataStorageSQLLite.localDateTimeToDBString(fileInfo1.getModifiedDate()), DataStorageSQLLite.localDateTimeToDBString(fileInfo2.getModifiedDate()));
-        when(mockResultSet.getString(DataStorageSQLLite.Fields.FILE_MD5_FIELD.getDbFieldName()))
+        when(mockResultSet.getString(DataStorageSQLite.Fields.FILE_DATE_FIELD.getDbFieldName()))
+                .thenReturn(DateUtils.localDateTimeToString(fileInfo1.getModifiedDate()), DateUtils.localDateTimeToString(fileInfo2.getModifiedDate()));
+        when(mockResultSet.getString(DataStorageSQLite.Fields.FILE_MD5_FIELD.getDbFieldName()))
                 .thenReturn(fileInfo1.getMd5Hash(), fileInfo2.getMd5Hash());
 
         service.prepareDB();
-        List<FileInfo> result = service.getList();
+        List<FileInfo> result = service.getFileInfoList();
         assertEquals(2, result.size());
         assertEquals(fileInfo1, result.get(0));
         assertEquals(fileInfo2, result.get(1));

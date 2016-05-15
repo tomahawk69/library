@@ -3,19 +3,20 @@ package org.library.core.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.core.dao.DataStorage;
+import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
-import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Component("dataServiceDBImpl")
-public class DataServiceDBImpl extends AbstractDataService{
+@Component()
+public class DataServiceDBImpl extends AbstractDataService {
     private final DataStorage dataStorage;
     private static final Logger LOGGER = LogManager.getLogger(DataServiceDBImpl.class);
 
@@ -25,7 +26,7 @@ public class DataServiceDBImpl extends AbstractDataService{
     }
 
     @Override
-    public void insert(FileInfo fileInfo) {
+    public void insertFileInfo(FileInfo fileInfo) {
         if (fileInfo == null) {
             throw new IllegalArgumentException();
         }
@@ -34,7 +35,7 @@ public class DataServiceDBImpl extends AbstractDataService{
     }
 
     @Override
-    public void update(FileInfo fileInfoUpdated, FileInfo fileInfoRollback) {
+    public void updateFileInfo(FileInfo fileInfoUpdated, FileInfo fileInfoRollback) {
         if (fileInfoUpdated == null || fileInfoRollback == null) {
             throw new IllegalArgumentException();
         }
@@ -43,7 +44,7 @@ public class DataServiceDBImpl extends AbstractDataService{
     }
 
     @Override
-    public void delete(FileInfo fileInfo) {
+    public void deleteFileInfo(FileInfo fileInfo) {
         if (fileInfo == null) {
             throw new IllegalArgumentException();
         }
@@ -57,27 +58,27 @@ public class DataServiceDBImpl extends AbstractDataService{
     }
 
     @Override
-    public List<FileInfo> getList() {
+    public List<FileInfo> getFileInfoList() {
         return null;
     }
 
     @Override
-    public List<FileUpdateOperation> commit() {
-        LOGGER.info("commit started");
+    public List<FileUpdateOperation> commitFileInfo() {
+        LOGGER.info("commitFileInfo started");
         try {
-            dataStorage.createConnection();
+            dataStorage.prepareBatch(false);
             dataStorage.clearData();
             for (FileUpdateOperation fileUpdateOperation : queue) {
                 synchronized (fileUpdateOperation.getFileInfo()) {
                     switch (fileUpdateOperation.getUpdateType()) {
                         case INSERT:
-                            dataStorage.insert(fileUpdateOperation.getFileInfo());
+                            dataStorage.batchInsertFileInfo(fileUpdateOperation.getFileInfo());
                             break;
                         case UPDATE:
-                            dataStorage.update(fileUpdateOperation.getFileInfo());
+                            dataStorage.batchUpdateFileInfo(fileUpdateOperation.getFileInfo());
                             break;
                         case DELETE:
-                            dataStorage.delete(fileUpdateOperation.getFileInfo());
+                            dataStorage.batchDeleteFileInfo(fileUpdateOperation.getFileInfo());
                             break;
                         default:
                             throw new Exception("Unknown operation type: " + fileUpdateOperation.getUpdateType());
@@ -85,32 +86,48 @@ public class DataServiceDBImpl extends AbstractDataService{
                 }
                 fileUpdateOperation.setSuccess();
             }
+            dataStorage.commit();
         } catch (Exception ex) {
             LOGGER.error(ex);
         } finally {
             dataStorage.closeConnection();
         }
         List<FileUpdateOperation> result = getFailedOperationsAndClearQueue();
-        LOGGER.info("commit done, failed " + result.size());
+        LOGGER.info("commitFileInfo done, failed " + result.size());
         return result;
     }
 
     @Override
-    public List<FileUpdateOperation> rollback() {
-        List<FileUpdateOperation> result = getFailedOperationsAndClearQueue();
-        return result;
+    public List<FileUpdateOperation> rollbackFileInfo() {
+        return getFailedOperationsAndClearQueue();
     }
 
     @Override
-    public void setLibraryPath(Path libraryPath) {
-        LOGGER.info("setLibraryPath to " + libraryPath);
-        this.libraryPath = libraryPath;
+    public void setDatabasePath(Path libraryPath) {
+        LOGGER.info("setDatabasePath to " + libraryPath);
+        this.databasePath = libraryPath;
+        dataStorage.setDbPath(libraryPath);
+    }
+
+    @Override
+    public void prepareDatabase() throws LibraryDatabaseException {
+        LOGGER.info("prepareDatabase started");
         try {
-            dataStorage.setDbPath(libraryPath);
-        } catch (SQLException ex) {
-            // TODO properly handle exception
-            LOGGER.error(ex);
+            dataStorage.prepareDB();
+        } catch (LibraryDatabaseException e) {
+            LOGGER.error("prepareDatabase error", e);
+            throw new LibraryDatabaseException(e);
         }
+    }
+
+    @Override
+    public int getFileInfoCount() {
+        return dataStorage.getFileInfoCount();
+    }
+
+    @Override
+    public LocalDateTime getLastUpdateDate() {
+        return dataStorage.getLastUpdateDate();
     }
 
     private List<FileUpdateOperation> getFailedOperationsAndClearQueue() {

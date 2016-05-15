@@ -1,20 +1,26 @@
 package org.library.common.entities;
 
 public enum DataStatus {
-    INITIALIZING("Initializing", false), IDLE("Idle", true), REFRESH("Refresh", false), CANCELLING("Cancelling", false);
+    INITIALIZING("Initializing", false, false), IDLE("Idle", true, false), REFRESH("Refresh", false, true), CANCELLING("Cancelling", false, false), NO_LIBRARY_SELECTED("No library selected", false, false);
     private final String name;
-    private final Boolean isRefreshAllowed;
+    private final boolean isRefreshAllowed;
+    private final boolean isOperation;
 
-   DataStatus(String name, Boolean isRefreshAllowed) {
+    DataStatus(String name, Boolean isRefreshAllowed, boolean isOperation) {
         this.name = name;
         this.isRefreshAllowed = isRefreshAllowed;
+        this.isOperation = isOperation;
     }
 
     public String getName() {
         return name;
     }
 
-    public Boolean getRefreshAllowed() {
+    public boolean getRefreshAllowed() {
         return isRefreshAllowed;
+    }
+
+    public boolean getOperation() {
+        return isOperation;
     }
 }

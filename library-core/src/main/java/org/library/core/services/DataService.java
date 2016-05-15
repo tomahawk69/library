@@ -1,26 +1,33 @@
 package org.library.core.services;
 
+import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-interface DataService {
+public interface DataService {
 
     // CRUD methods
-    void insert(FileInfo fileInfoNew);
-    void update(FileInfo fileInfoUpdated, FileInfo fileInfoRollback);
-    void delete(FileInfo fileInfo);
+    void insertFileInfo(FileInfo fileInfoNew);
+    void updateFileInfo(FileInfo fileInfoUpdated, FileInfo fileInfoRollback);
+    void deleteFileInfo(FileInfo fileInfo);
     FileInfo get(UUID uuid);
 
     // get all data method
-    List<FileInfo> getList();
+    List<FileInfo> getFileInfoList();
 
     // transaction operators
-    List<FileUpdateOperation> commit();
-    List<FileUpdateOperation> rollback();
+    List<FileUpdateOperation> commitFileInfo();
+    List<FileUpdateOperation> rollbackFileInfo();
 
-    void setLibraryPath(Path libraryPath);
+    void setDatabasePath(Path path);
+    void prepareDatabase() throws LibraryDatabaseException;
+
+    int getFileInfoCount();
+
+    LocalDateTime getLastUpdateDate();
 }

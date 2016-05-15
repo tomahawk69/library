@@ -1,23 +1,34 @@
 package org.library.core.dao;
 
 
+import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.entities.FileInfo;
 
 import java.nio.file.Path;
-import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface DataStorage {
-    void update(FileInfo fileInfo) throws SQLException;
-    void delete(FileInfo fileInfo) throws SQLException;
-    void insert(FileInfo fileInfo) throws SQLException;
-    List<FileInfo> getList() throws SQLException;
 
-    void setDbPath(Path dbPath) throws SQLException;
+    void batchUpdateFileInfo(FileInfo fileInfo) throws LibraryDatabaseException;
+    void batchDeleteFileInfo(FileInfo fileInfo) throws LibraryDatabaseException;
+    void batchInsertFileInfo(FileInfo fileInfo) throws LibraryDatabaseException;
 
-    void clearData() throws SQLException;
+    void prepareBatch(boolean autoCommit) throws LibraryDatabaseException;
+    void commit() throws LibraryDatabaseException;
+    void rollback() throws LibraryDatabaseException;
 
-    void createConnection() throws SQLException;
+    List<FileInfo> getFileInfoList() throws LibraryDatabaseException;
+
+    void prepareDB() throws LibraryDatabaseException;
+
+    void setDbPath(Path dbPath);
+
+    void clearData() throws LibraryDatabaseException;
 
     void closeConnection();
+
+    int getFileInfoCount();
+
+    LocalDateTime getLastUpdateDate();
 }
