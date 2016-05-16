@@ -21,17 +21,16 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public List<Path> getFilesList(List<String> extensions, boolean isRecursive, Path path) throws IOException {
-        List<Path> result = FileUtils.getFilesList(extensions, true, path);
-        return result;
+        return FileUtils.getFilesList(extensions, true, path);
     }
 
     @Override
     public boolean proceedFileInfo(final FileInfo fileInfo, Path filePath) throws IOException {
         Long fileSize = FileUtils.getFileSize(filePath);
         LocalDateTime fileDate = FileUtils.getFileLastModifiedDate(filePath);
-        boolean result = !FileInfoHelper.checkFileInfoChanged(fileInfo, fileSize, fileDate);
+        boolean result = FileInfoHelper.checkFileInfoChanged(fileInfo, fileSize, fileDate);
         if (result) {
-            synchronized (fileInfo) {
+            synchronized (fileInfo.getPath()) {
                 fileInfo.setFileSize(fileSize);
                 fileInfo.setModifiedDate(fileDate);
                 try {

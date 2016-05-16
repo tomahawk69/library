@@ -33,7 +33,7 @@ Active functions:
 Logging properties (info by default) are in library-core\src\main\resources\log4j2.xml
 
 Roadmap:
-1. Implement "update" operation
-2. Implement "delete" operation
+1. Technical debt
+2. Move DB structure management to procedure
 3. Implement backups
 4. Move to one of DB frameworks

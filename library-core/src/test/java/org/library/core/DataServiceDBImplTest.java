@@ -6,7 +6,6 @@ import org.junit.rules.ExpectedException;
 import org.library.core.dao.DataStorage;
 import org.library.core.services.DataServiceDBImpl;
 import org.library.entities.FileInfo;
-import org.library.entities.FileInfoHelper;
 import org.library.entities.FileUpdateOperation;
 
 import java.sql.SQLException;
@@ -48,32 +47,19 @@ public class DataServiceDBImplTest {
         DataServiceDBImpl service = new DataServiceDBImpl(dataStorage);
         assertEquals(0, service.getQueueSize());
         FileInfo fileInfo1 = new FileInfo("");
-        FileInfo fileInfo1Rollback = FileInfoHelper.createFileInfoCopy(fileInfo1);
         FileInfo fileInfo2 = new FileInfo("");
-        FileInfo fileInfo2Rollback = FileInfoHelper.createFileInfoCopy(fileInfo2);
-        service.updateFileInfo(fileInfo1, fileInfo1Rollback);
-        service.updateFileInfo(fileInfo2, fileInfo2Rollback);
+        service.updateFileInfo(fileInfo1);
+        service.updateFileInfo(fileInfo2);
         assertEquals(2, service.getQueueSize());
     }
 
     @Test
-    public void testUpdateNull1() throws Exception {
+    public void testUpdateNull() throws Exception {
         DataStorage dataStorage = mock(DataStorage.class);
         DataServiceDBImpl service = new DataServiceDBImpl(dataStorage);
-        FileInfo fileInfo = new FileInfo("");
         assertEquals(0, service.getQueueSize());
         expectedException.expect(IllegalArgumentException.class);
-        service.updateFileInfo(fileInfo, null);
-    }
-
-    @Test
-    public void testUpdateNull2() throws Exception {
-        DataStorage dataStorage = mock(DataStorage.class);
-        DataServiceDBImpl service = new DataServiceDBImpl(dataStorage);
-        FileInfo fileInfo = new FileInfo("");
-        assertEquals(0, service.getQueueSize());
-        expectedException.expect(IllegalArgumentException.class);
-        service.updateFileInfo(null, fileInfo);
+        service.updateFileInfo(null);
     }
 
     @Test
@@ -105,8 +91,7 @@ public class DataServiceDBImplTest {
         FileInfo fileInfo1 = new FileInfo("");
         FileInfo fileInfo2 = new FileInfo("");
         service.insertFileInfo(fileInfo1);
-        FileInfo fileInfo2Rollback = FileInfoHelper.createFileInfoCopy(fileInfo2);
-        service.updateFileInfo(fileInfo2, fileInfo2Rollback);
+        service.updateFileInfo(fileInfo2);
         assertEquals(2, service.getQueueSize());
 
         doNothing().when(dataStorage).batchInsertFileInfo(fileInfo1);
@@ -118,7 +103,7 @@ public class DataServiceDBImplTest {
 
         verify(dataStorage).batchInsertFileInfo(fileInfo1);
         verify(dataStorage).batchUpdateFileInfo(fileInfo2);
-        verify(dataStorage).clearData();
+        verify(dataStorage, never()).clearData();
     }
 
     @Test
@@ -147,8 +132,7 @@ public class DataServiceDBImplTest {
         FileInfo fileInfo1 = new FileInfo("");
         FileInfo fileInfo2 = new FileInfo("");
         service.insertFileInfo(fileInfo1);
-        FileInfo fileInfo2Rollback = FileInfoHelper.createFileInfoCopy(fileInfo2);
-        service.updateFileInfo(fileInfo2, fileInfo2Rollback);
+        service.updateFileInfo(fileInfo2);
         assertEquals(2, service.getQueueSize());
 
         doNothing().when(dataStorage).batchInsertFileInfo(fileInfo1);
@@ -161,7 +145,6 @@ public class DataServiceDBImplTest {
         verify(dataStorage).batchInsertFileInfo(fileInfo1);
         verify(dataStorage).batchUpdateFileInfo(fileInfo2);
         assertEquals(fileInfo2, result.get(0).getFileInfo());
-        assertEquals(fileInfo2Rollback, result.get(0).getRollbackCopy());
     }
 
     @Test
@@ -171,15 +154,13 @@ public class DataServiceDBImplTest {
         assertEquals(0, service.getQueueSize());
         FileInfo fileInfo1 = new FileInfo("");
         FileInfo fileInfo2 = new FileInfo("");
-        FileInfo fileInfo2Rollback = FileInfoHelper.createFileInfoCopy(fileInfo1);
         service.insertFileInfo(fileInfo1);
-        service.updateFileInfo(fileInfo2, fileInfo2Rollback);
+        service.updateFileInfo(fileInfo2);
         assertEquals(2, service.getQueueSize());
         List<FileUpdateOperation> result = service.rollbackFileInfo();
         assertEquals(0, service.getQueueSize());
         assertEquals(2, result.size());
         assertEquals(fileInfo1, result.get(0).getFileInfo());
         assertEquals(fileInfo2, result.get(1).getFileInfo());
-        assertEquals(fileInfo2Rollback, result.get(1).getRollbackCopy());
     }
 }

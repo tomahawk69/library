@@ -74,6 +74,7 @@ public class DataStorageSQLiteTest {
         Connection mockConnection = mock(Connection.class);
         doReturn(mockConnection).when(service).getConnection();
         doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableSQL);
+        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableMetaSQL);
         doNothing().when(service).createStructure();
 
         service.prepareDB();

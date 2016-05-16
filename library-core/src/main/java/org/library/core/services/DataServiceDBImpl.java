@@ -4,12 +4,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.core.dao.DataStorage;
 import org.library.core.exceptions.LibraryDatabaseException;
+import org.library.core.utils.DateUtils;
 import org.library.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -35,11 +37,11 @@ public class DataServiceDBImpl extends AbstractDataService {
     }
 
     @Override
-    public void updateFileInfo(FileInfo fileInfoUpdated, FileInfo fileInfoRollback) {
-        if (fileInfoUpdated == null || fileInfoRollback == null) {
+    public void updateFileInfo(FileInfo fileInfoUpdated) {
+        if (fileInfoUpdated == null) {
             throw new IllegalArgumentException();
         }
-        FileUpdateOperation updateOperation = new FileUpdateOperation(FileUpdateOperation.UpdateType.UPDATE, fileInfoUpdated, fileInfoRollback);
+        FileUpdateOperation updateOperation = new FileUpdateOperation(FileUpdateOperation.UpdateType.UPDATE, fileInfoUpdated);
         addOperationToQueue(updateOperation);
     }
 
@@ -58,16 +60,16 @@ public class DataServiceDBImpl extends AbstractDataService {
     }
 
     @Override
-    public List<FileInfo> getFileInfoList() {
-        return null;
+    public List<FileInfo> getFileInfoList() throws LibraryDatabaseException {
+        return dataStorage.getFileInfoList();
     }
 
     @Override
     public List<FileUpdateOperation> commitFileInfo() {
-        LOGGER.info("commitFileInfo started");
+        boolean hasChanged = queue.size() > 0;
+        LOGGER.info("commitFileInfo started for " + queue.size());
         try {
             dataStorage.prepareBatch(false);
-            dataStorage.clearData();
             for (FileUpdateOperation fileUpdateOperation : queue) {
                 synchronized (fileUpdateOperation.getFileInfo()) {
                     switch (fileUpdateOperation.getUpdateType()) {
@@ -87,8 +89,11 @@ public class DataServiceDBImpl extends AbstractDataService {
                 fileUpdateOperation.setSuccess();
             }
             dataStorage.commit();
-        } catch (Exception ex) {
-            LOGGER.error(ex);
+            if (hasChanged) {
+                updateLastUpdateDate(LocalDateTime.now());
+            }
+        } catch (Exception e) {
+            LOGGER.error("commitFileInfo error", e);
         } finally {
             dataStorage.closeConnection();
         }
@@ -127,7 +132,32 @@ public class DataServiceDBImpl extends AbstractDataService {
 
     @Override
     public LocalDateTime getLastUpdateDate() {
-        return dataStorage.getLastUpdateDate();
+        return (LocalDateTime) dataStorage.getMeta().get(DataStorage.Fields.LAST_UPDATED_FIELD);
+    }
+
+    @Override
+    public LocalDateTime getLastRefreshDate() {
+        return (LocalDateTime) dataStorage.getMeta().get(DataStorage.Fields.LAST_REFRESH_FIELD);
+    }
+
+    @Override
+    public void updateLastUpdateDate(LocalDateTime dateTime) throws LibraryDatabaseException {
+        try {
+            dataStorage.setMeta(DataStorage.Fields.LAST_UPDATED_FIELD, DateUtils.localDateTimeToString(dateTime));
+        } catch (SQLException e) {
+            LOGGER.error("updateLastUpdateDate error", e);
+            throw new LibraryDatabaseException(e);
+        }
+    }
+
+    @Override
+    public void updateLastRefreshDate(LocalDateTime dateTime) throws LibraryDatabaseException {
+        try {
+            dataStorage.setMeta(DataStorage.Fields.LAST_REFRESH_FIELD, DateUtils.localDateTimeToString(dateTime));
+        } catch (SQLException e) {
+            LOGGER.error("updateLastUpdateDate error", e);
+            throw new LibraryDatabaseException(e);
+        }
     }
 
     private List<FileUpdateOperation> getFailedOperationsAndClearQueue() {

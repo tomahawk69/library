@@ -3,6 +3,7 @@ package org.library.core.services;
 import org.library.entities.FileUpdateOperation;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,9 +15,9 @@ public abstract class AbstractDataService  implements DataService {
         return queue.size();
     }
 
-    void addOperationToQueue(FileUpdateOperation modifyOperation) {
+    void addOperationToQueue(FileUpdateOperation updateOperation) {
         synchronized (queue) {
-            queue.add(modifyOperation);
+            queue.add(updateOperation);
         }
     }
 
@@ -24,5 +25,4 @@ public abstract class AbstractDataService  implements DataService {
     public void setDatabasePath(Path libraryPath) {
         this.databasePath = libraryPath;
     }
-
 }

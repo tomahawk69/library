@@ -13,12 +13,12 @@ public interface DataService {
 
     // CRUD methods
     void insertFileInfo(FileInfo fileInfoNew);
-    void updateFileInfo(FileInfo fileInfoUpdated, FileInfo fileInfoRollback);
+    void updateFileInfo(FileInfo fileInfoUpdated);
     void deleteFileInfo(FileInfo fileInfo);
     FileInfo get(UUID uuid);
 
     // get all data method
-    List<FileInfo> getFileInfoList();
+    List<FileInfo> getFileInfoList() throws LibraryDatabaseException;
 
     // transaction operators
     List<FileUpdateOperation> commitFileInfo();
@@ -30,4 +30,8 @@ public interface DataService {
     int getFileInfoCount();
 
     LocalDateTime getLastUpdateDate();
+    LocalDateTime getLastRefreshDate();
+
+    void updateLastUpdateDate(LocalDateTime dateTime) throws LibraryDatabaseException;
+    void updateLastRefreshDate(LocalDateTime dateTime) throws LibraryDatabaseException;
 }

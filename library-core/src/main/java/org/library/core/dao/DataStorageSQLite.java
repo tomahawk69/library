@@ -11,9 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
 class DataStorageSQLite implements DataStorage {
@@ -34,14 +32,15 @@ class DataStorageSQLite implements DataStorage {
     static String updateFileInfoSQL;
     static String getFileInfoListSQL;
     static String getFileInfoCountSQL;
-    static String getLastUpdateDateSQL;
+    static String getMetaSQL;
+    static String setMetaSQL;
     static String clearFileInfoSQL;
 
     private static final String FILES_TABLE_NAME = "files";
-    private static final String META_TABLE_NAME = "database";
+    private static final String META_TABLE_NAME = "meta";
 
     static {
-        insertFileInfoSQL = new StringBuilder("batchInsertFileInfo into ")
+        insertFileInfoSQL = new StringBuilder("insert into ")
                 .append(FILES_TABLE_NAME).append(" (")
                 .append(Fields.UUID_FIELD.getDbFieldName()).append(", ")
                 .append(Fields.FILE_PATH_FIELD.getDbFieldName()).append(", ")
@@ -50,10 +49,10 @@ class DataStorageSQLite implements DataStorage {
                 .append(Fields.FILE_DATE_FIELD.getDbFieldName()).append(", ")
                 .append(Fields.LAST_UPDATED_FIELD.getDbFieldName()).append(")")
                 .append(" values (?, ?, ?, ?, ?, ?)").toString();
-        deleteFileInfoSQL = new StringBuilder("batchDeleteFileInfo from ")
+        deleteFileInfoSQL = new StringBuilder("delete from ")
                 .append(FILES_TABLE_NAME).append(" where ")
                 .append(Fields.UUID_FIELD.getDbFieldName()).append(" = ?").toString();
-        updateFileInfoSQL = new StringBuilder("batchUpdateFileInfo ")
+        updateFileInfoSQL = new StringBuilder("update ")
                 .append(FILES_TABLE_NAME).append(" set ")
                 .append(Fields.FILE_PATH_FIELD.getDbFieldName()).append(" = ?, ")
                 .append(Fields.FILE_NAME_FIELD.getDbFieldName()).append(" = ?, ")
@@ -88,17 +87,19 @@ class DataStorageSQLite implements DataStorage {
                 .append(Fields.FILE_PATH_FIELD.getDbFieldName()).append(")").toString();
         createTableMetaSQL = new StringBuilder("create table ")
                 .append(META_TABLE_NAME).append(" (")
-                .append(Fields.LAST_UPDATED_FIELD.getDbFieldName()).append(" datetime null)")
+                .append(Fields.LAST_UPDATED_FIELD.getDbFieldName()).append(" datetime null, ")
+                .append(Fields.LAST_REFRESH_FIELD.getDbFieldName()).append(" datetime null)")
                 .toString();
         checkTableSQL = String.format("SELECT count() FROM sqlite_master WHERE type='table' AND name='%s'",
                 FILES_TABLE_NAME);
         checkTableMetaSQL = String.format("SELECT count() FROM sqlite_master WHERE type='table' AND name='%s'",
                 META_TABLE_NAME);
-        initTableMetaSQL = String.format("INSERT INTO %s (%s) values(null)",
-                META_TABLE_NAME, Fields.LAST_UPDATED_FIELD.getDbFieldName());
+        initTableMetaSQL = String.format("INSERT INTO %s (%s, %s) values(null, null)",
+                META_TABLE_NAME, Fields.LAST_UPDATED_FIELD.getDbFieldName(), Fields.LAST_REFRESH_FIELD.getDbFieldName());
+        setMetaSQL = "UPDATE " + META_TABLE_NAME + " set %s = ?";
+        getMetaSQL = String.format("SELECT %s, %s FROM %s", Fields.LAST_UPDATED_FIELD.getDbFieldName(), Fields.LAST_REFRESH_FIELD.getDbFieldName(), META_TABLE_NAME);
         getFileInfoCountSQL = String.format("SELECT count() FROM %s", FILES_TABLE_NAME);
-        getLastUpdateDateSQL = String.format("SELECT %s FROM %s", Fields.LAST_UPDATED_FIELD.getDbFieldName(), META_TABLE_NAME);
-        clearFileInfoSQL = "batchDeleteFileInfo from " + FILES_TABLE_NAME;
+        clearFileInfoSQL = "delete from " + FILES_TABLE_NAME;
     }
 
     @Override
@@ -166,13 +167,15 @@ class DataStorageSQLite implements DataStorage {
 
     @Override
     public void commit() throws LibraryDatabaseException {
+        LOGGER.debug("commit");
         try {
             if (isConnectionActive() && !connection.getAutoCommit()) {
+                LOGGER.debug("commit executed");
                 connection.commit();
             }
             closeConnection();
         } catch (SQLException e) {
-            LOGGER.error("commitFileInfo error", e);
+            LOGGER.error("commit error", e);
             throw new LibraryDatabaseException(e);
         }
     }
@@ -333,10 +336,54 @@ class DataStorageSQLite implements DataStorage {
     }
 
     @Override
+    public Map<Fields, Object> getMeta() {
+        Map<Fields, Object> result = new HashMap<>();
+        try {
+            Map<String, Object> values = executeSelectStatement(getMetaSQL);
+            if (values.containsKey(Fields.LAST_REFRESH_FIELD.getDbFieldName())) {
+                result.put(Fields.LAST_REFRESH_FIELD, DateUtils.stringToLocalDateTime(String.valueOf(values.get(Fields.LAST_REFRESH_FIELD.getDbFieldName()))));
+            }
+            if (values.containsKey(Fields.LAST_UPDATED_FIELD.getDbFieldName())) {
+                result.put(Fields.LAST_UPDATED_FIELD, DateUtils.stringToLocalDateTime(String.valueOf(values.get(Fields.LAST_UPDATED_FIELD.getDbFieldName()))));
+            }
+        } catch (Exception e) {
+            LOGGER.error("getMeta error", e);
+        }
+        LOGGER.info("Meta is " + result);
+        return result;
+    }
+
+    @Override
+    public void setMeta(Fields field, Object value) throws SQLException {
+        try (Connection connection = getConnection()) {
+            String updateSql = String.format(setMetaSQL, field.getDbFieldName());
+            PreparedStatement statement = connection.prepareStatement(updateSql);
+            statement.setObject(1, value);
+            statement.executeUpdate();
+        }
+    }
+
+    private Map<String, Object> executeSelectStatement(String querySql) throws SQLException {
+        Map<String, Object> result = new HashMap<>();
+        try (Connection connection = getConnection()) {
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(querySql);
+            ResultSetMetaData metaData = resultSet.getMetaData();
+            if (resultSet.next()) {
+                for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                    if (resultSet.getObject(i) != null) {
+                        result.put(metaData.getColumnName(i), resultSet.getObject(i));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
     public LocalDateTime getLastUpdateDate() {
         LocalDateTime result = null;
         try {
-            String dateString = (String) executeOneSelectStatement(getLastUpdateDateSQL);
+            String dateString = (String) executeOneSelectStatement(getMetaSQL);
             if (dateString != null) {
                 result = DateUtils.stringToLocalDateTime(dateString);
             }
@@ -353,22 +400,6 @@ class DataStorageSQLite implements DataStorage {
             }
         } catch (SQLException ex) {
             LOGGER.error(ex);
-        }
-    }
-
-    enum Fields {
-        UUID_FIELD("f_uuid"), FILE_PATH_FIELD("f_file_path"), FILE_NAME_FIELD("f_file_name"),
-        FILE_SIZE_FIELD("f_file_size"), FILE_DATE_FIELD("f_file_date"), FILE_MD5_FIELD("f_file_md5"),
-        LAST_UPDATED_FIELD("f_last_updated");
-
-        private final String dbFieldName;
-
-        Fields(String dbFieldName) {
-            this.dbFieldName = dbFieldName;
-        }
-
-        public String getDbFieldName() {
-            return dbFieldName;
         }
     }
 }

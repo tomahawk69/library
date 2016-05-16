@@ -9,6 +9,7 @@
   function libraryService($http, log, $timeout, $interval) {
     var vm = this;
     vm.data = {debugEnabled: false};
+    vm.settings = {isOffline : true}
     var urlBase = 'http://localhost:8083/';
 
     vm.refreshData = function() {
@@ -35,8 +36,13 @@
       }
       $http.get(urlBase + "getDataStatus").then(function(response) {
         vm.data.status = response.data;
+        if (vm.settings.isOffline) {
+          vm.settings.isOffline = false;
+          vm.getDebugEnabled();
+        }
       }, function() {
         vm.data['status'] = {};
+        vm.settings.isOffline = true;
         vm.data.status.status = 'OFFLINE';
       });
     }

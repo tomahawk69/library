@@ -14,8 +14,12 @@ public class Library {
     private LocalDateTime lastUpdateDate;
     private DataStatus dataStatus;
     private final StampedLock dataStatusLock = new StampedLock();
-    private AtomicInteger updatedCount = new AtomicInteger(0);
     private DataService dataService;
+
+    private final AtomicInteger refreshProceedCount = new AtomicInteger(0);
+    private final AtomicInteger refreshUpdatedCount = new AtomicInteger(0);
+    private final AtomicInteger refreshItemsCount = new AtomicInteger(0);
+    private LocalDateTime lastRefreshDate;
 
     public Library(DataService dataService, String path) {
         this.path = path;
@@ -33,6 +37,12 @@ public class Library {
                 ", refreshDate=" + refreshDate +
                 ", itemsCount=" + itemsCount +
                 ", lastUpdateDate=" + lastUpdateDate +
+                ", dataStatus=" + dataStatus +
+                ", dataStatusLock=" + dataStatusLock +
+                ", dataService=" + dataService +
+                ", refreshProceedCount=" + refreshProceedCount +
+                ", refreshUpdatedCount=" + refreshUpdatedCount +
+                ", refreshItemsCount=" + refreshItemsCount +
                 '}';
     }
 
@@ -63,6 +73,10 @@ public class Library {
         return lastUpdateDate;
     }
 
+    public LocalDateTime getRefreshDate() {
+        return refreshDate;
+    }
+
     public void setLastUpdateDate(LocalDateTime lastUpdateDate) {
         this.lastUpdateDate = lastUpdateDate;
     }
@@ -75,12 +89,16 @@ public class Library {
         this.dataStatus = dataStatus;
     }
 
-    public Integer getUpdatedCount() {
-        return updatedCount.get();
+    public Integer getRefreshProceedCount() {
+        return refreshProceedCount.get();
     }
 
-    public void incrementUpdatedCount() {
-        updatedCount.incrementAndGet();
+    public AtomicInteger getRefreshUpdatedCount() {
+        return refreshUpdatedCount;
+    }
+
+    public AtomicInteger getRefreshItemsCount() {
+        return refreshItemsCount;
     }
 
     public StampedLock getDataStatusLock() {
@@ -89,5 +107,25 @@ public class Library {
 
     public DataService getDataService() {
         return dataService;
+    }
+
+    public void incrementRefreshProceedCount() {
+        refreshProceedCount.incrementAndGet();
+    }
+    public void resetRefreshProceedCount() {
+        refreshProceedCount.set(0);
+    }
+    public void incrementRefreshUpdatedCount() {
+        refreshUpdatedCount.incrementAndGet();
+    }
+    public void resetRefreshUpdatedCount() {
+        refreshUpdatedCount.set(0);
+    }
+    public void setRefreshItemsCount(int value) {
+        refreshItemsCount.set(value);
+    }
+
+    public void setLastRefreshDate(LocalDateTime lastRefreshDate) {
+        this.lastRefreshDate = lastRefreshDate;
     }
 }

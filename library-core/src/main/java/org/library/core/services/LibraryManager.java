@@ -7,6 +7,7 @@ import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.core.exceptions.LibrarySettingsException;
 import org.library.core.utils.DateUtils;
 import org.library.entities.FileInfo;
+import org.library.entities.FileInfoHelper;
 import org.library.entities.FileType;
 import org.library.entities.Library;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
@@ -157,6 +159,7 @@ class LibraryManager {
     private void populateLibraryMetadata(Library library) {
         library.setItemsCount(library.getDataService().getFileInfoCount());
         library.setLastUpdateDate(library.getDataService().getLastUpdateDate());
+        library.setLastRefreshDate(library.getDataService().getLastRefreshDate());
     }
 
     public Collection<Library> getLibraries() {
@@ -211,7 +214,11 @@ class LibraryManager {
         if (library != null) {
             result.put("status", library.getDataStatus());
             result.put("count", library.getItemsCount());
-            result.put("updated", library.getUpdatedCount());
+            result.put("last_update", library.getLastUpdateDate());
+            result.put("last_refresh", library.getRefreshDate());
+            result.put("refresh_count", library.getRefreshItemsCount());
+            result.put("refresh_proceed", library.getRefreshProceedCount());
+            result.put("refresh_updated", library.getRefreshUpdatedCount());
             return result;
         } else {
             result.put("status", DataStatus.NO_LIBRARY_SELECTED);
@@ -243,18 +250,30 @@ class LibraryManager {
         LOGGER.debug("refreshDataEx started");
         if (semaphoreService.acquireGlobalAccess()) {
             try {
-                Future<List<Path>> filesGetFuture = executor.submit(() -> getFiles(Paths.get(library.getPath())));
+                library.setRefreshItemsCount(0);
+                library.resetRefreshProceedCount();
+                library.resetRefreshUpdatedCount();
 
+                Future<List<Path>> filesGetFuture = executor.submit(() -> getFiles(Paths.get(library.getPath())));
                 Future<List<FileInfo>> dbGetFuture = executor.submit(() -> getFileInfoList(library));
 
                 List<Path> files = filesGetFuture.get();
                 LOGGER.debug("files get " + files.size());
-                List<FileInfo> infos = dbGetFuture.get();
-                LOGGER.debug("infos get " + files.size());
+                LocalDateTime localDateTime = LocalDateTime.now();
+
+                Map<Path, FileInfo> infos = FileInfoHelper.listOfFileInfoToMap(Paths.get(library.getPath()), dbGetFuture.get());
+                LOGGER.debug("db file info get " + infos.size());
+
+                library.setRefreshItemsCount(files.size() + infos.size());
 
                 processFiles(library, files, infos);
 
-            } catch (InterruptedException | ExecutionException e) {
+                library.getDataService().commitFileInfo();
+                library.getDataService().updateLastRefreshDate(localDateTime);
+
+                populateLibraryMetadata(library);
+
+            } catch (InterruptedException | ExecutionException | IOException | LibraryDatabaseException e) {
                 LOGGER.error(e);
             } finally {
                 semaphoreService.releaseGlobalAccess();
@@ -268,7 +287,9 @@ class LibraryManager {
         List<FileInfo> result = Collections.emptyList();
         if (semaphoreService.acquireGlobalAccess()) {
             try {
-                library.getDataService();
+                result = library.getDataService().getFileInfoList();
+            } catch (LibraryDatabaseException e) {
+                LOGGER.debug("getFileInfoList was unsuccessful", e);
             } finally {
                 semaphoreService.acquireGlobalAccess();
             }
@@ -291,10 +312,74 @@ class LibraryManager {
 
     }
 
-    private void processFiles(Library library, List<Path> files, List<FileInfo> infos) {
-
+    /**
+     * Proceed found files and compare them with existed values to get new/updated items
+     * Next proceed with items from DB to get deleted values
+     *
+     * @param library proceed library
+     * @param files   list of files paths
+     * @param infos   map of path:fileInfo items from database
+     */
+    private void processFiles(Library library, final List<Path> files, final Map<Path, FileInfo> infos) throws IOException {
+        ExecutorService executorService = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
+        CountDownLatch countDownLatch = new CountDownLatch(files.size());
+        LOGGER.debug("Proceed new or updated files");
+        for (Path path : files) {
+            executorService.submit(() -> processFile(library, path, infos.get(path), countDownLatch));
+        }
+        LOGGER.debug("Proceed deleted files");
+        for (Path path : infos.keySet()) {
+            executorService.submit(() -> {
+                if (semaphoreService.acquireGlobalAccess()) {
+                    try {
+                        if (!files.contains(path)) {
+                            library.getDataService().deleteFileInfo(infos.get(path));
+                            LOGGER.debug("Deleted " + path);
+                        }
+                    } finally {
+                        semaphoreService.releaseGlobalAccess();
+                        library.incrementRefreshProceedCount();
+                    }
+                }
+            });
+        }
+        executorService.shutdown();
+        LOGGER.debug("Starting to await for tasks finish");
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            LOGGER.debug("Awaiting cancelled", e);
+        }
     }
 
+    private void processFile(Library library, Path path, FileInfo fileInfo, CountDownLatch countDownLatch) {
+        boolean inserted = false;
+        Path relativePath = Paths.get(library.getPath()).relativize(path);
+        if (fileInfo == null) {
+            fileInfo = new FileInfo(relativePath.toString());
+            inserted = true;
+        }
+        semaphoreService.acquireFilesAccess();
+        try {
+            if (fileService.proceedFileInfo(fileInfo, path)) {
+                if (inserted) {
+                    fileInfo.setUuid(UUID.randomUUID());
+                    library.getDataService().insertFileInfo(fileInfo);
+                    LOGGER.debug("Inserted " + path);
+                } else {
+                    library.getDataService().updateFileInfo(fileInfo);
+                    LOGGER.debug("Updated " + path);
+                }
+                library.incrementRefreshUpdatedCount();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Can't proceed " + path, e);
+        } finally {
+            semaphoreService.releaseFilesAccess();
+            library.incrementRefreshProceedCount();
+            countDownLatch.countDown();
+        }
+    }
 
     /**
      * @param library             library to process
