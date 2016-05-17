@@ -44,6 +44,22 @@
       return vm.data.status && vm.data.status.status == "REFRESH";
     }
 
+    vm.setCurrentLibrary = function() {
+      libraryService.setCurrentLibrary(vm.currentLibrary);
+    }
+
+    vm.libraries = function() {
+      return vm.data.libraries;
+    }
+
+    vm.refreshLibraries = function() {
+      libraryService.refreshLibraries();
+    }
+
+    vm.isOffline = function() {
+      return !vm.data.status || vm.data.status.status == "OFFLINE"
+    }
+
     // "vm.creationDate" is available by directive option "bindToController: true"
     vm.relativeDate = moment(vm.creationDate).fromNow();
   }

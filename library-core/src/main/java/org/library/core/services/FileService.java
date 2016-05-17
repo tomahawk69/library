@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-public interface FileService {
+interface FileService {
 
     List<Path> getFilesList(List<String> extensions, boolean isRecursive, Path path) throws IOException;
-    boolean proceedFileInfo(FileInfo fileInfo, Path filePath) throws IOException;
+    boolean checkFileInfoIsChangedAndUpdateIt(FileInfo fileInfo, Path filePath) throws IOException;
 
 }

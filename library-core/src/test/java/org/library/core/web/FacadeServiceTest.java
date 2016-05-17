@@ -6,6 +6,7 @@ import org.library.core.services.LibraryService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -18,16 +19,18 @@ public class FacadeServiceTest {
     public void refreshData() throws Exception {
         LibraryService mockLibraryService = mock(LibraryService.class);
         FacadeService service = new FacadeService(mockLibraryService);
-        service.refreshData();
-        verify(mockLibraryService).refreshData();
+        String uuid = UUID.randomUUID().toString();
+        service.refreshData(uuid);
+        verify(mockLibraryService).refreshData(uuid);
     }
 
     @Test
     public void stopRefreshData() throws Exception {
         LibraryService mockLibraryService = mock(LibraryService.class);
         FacadeService service = new FacadeService(mockLibraryService);
-        service.stopRefreshData();
-        verify(mockLibraryService).stopRefreshData();
+        String uuid = UUID.randomUUID().toString();
+        service.stopRefreshData(uuid);
+        verify(mockLibraryService).stopRefreshData(uuid);
     }
 
     @Test
@@ -37,8 +40,9 @@ public class FacadeServiceTest {
         Map<String, Object> expectedResult = new HashMap<>();
         expectedResult.put("some string", "test");
         expectedResult.put("some number", 123);
-        when(mockLibraryService.getDataStatus()).thenReturn(expectedResult);
-        Map<String, Object> result = service.getDataStatus();
+        String uuid = UUID.randomUUID().toString();
+        when(mockLibraryService.getDataStatus(uuid)).thenReturn(expectedResult);
+        Map<String, Object> result = service.getDataStatus(uuid);
         assertEquals(expectedResult, result);
     }
 

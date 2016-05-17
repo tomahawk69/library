@@ -4,6 +4,22 @@
   </div>
   <div flex layout="row">
     <div flex>
+      <md-input-container>
+        <label>Library</label>
+        <md-select ng-model="dashboard.currentLibrary" ng-change="dashboard.setCurrentLibrary()">
+          <md-option ng-repeat="library in dashboard.data.libraries" value="{{library.uuid}}">
+            {{library.name || library.path}}
+          </md-option>
+        </md-select>
+      </md-input-container>
+      <md-button
+        ng-click="dashboard.refreshLibraries()"
+        areaLabel="Refresh"
+        ng-disabled="dashboard.isOffline()">
+        <md-icon md-font-icon="refresh">refresh</md-icon>
+      </md-button>
+    </div>
+    <div flex>
       <md-button class="md-raised md-primary"
                  ng-disabled="!dashboard.isRefreshEnabled()"
                  ng-click="dashboard.refreshData()">

@@ -2,9 +2,9 @@ package org.library.core.services;
 
 import java.nio.file.Path;
 
-public interface DataServiceFactory {
+interface DataServiceFactory {
 
-    DataService createDataService(String serviceName, String storageName, Path path);
+    DataService createDataService(Path path);
 
     enum DataServiceType {
         DB("db", DataServiceDBImpl.class);

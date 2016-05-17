@@ -16,7 +16,7 @@ import java.util.List;
 
 @Component()
 @Scope("prototype")
-public class FileServiceImpl implements FileService {
+class FileServiceImpl implements FileService {
     private static final Logger LOGGER = LogManager.getLogger(FileServiceImpl.class);
 
     @Override
@@ -25,7 +25,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public boolean proceedFileInfo(final FileInfo fileInfo, Path filePath) throws IOException {
+    public boolean checkFileInfoIsChangedAndUpdateIt(final FileInfo fileInfo, Path filePath) throws IOException {
         Long fileSize = FileUtils.getFileSize(filePath);
         LocalDateTime fileDate = FileUtils.getFileLastModifiedDate(filePath);
         boolean result = FileInfoHelper.checkFileInfoChanged(fileInfo, fileSize, fileDate);

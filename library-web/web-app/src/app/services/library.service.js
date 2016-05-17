@@ -14,7 +14,7 @@
 
     vm.refreshData = function() {
       log.info("refreshData");
-      $http.get(urlBase + "refreshData").then(function(response) {
+      $http.get(urlBase + "refreshData/" + vm.data.currentLibrary).then(function(response) {
         vm.data.message = response.data;
         log.debug(response);
       });
@@ -22,7 +22,7 @@
     }
 
     vm.stopRefreshData = function() {
-      log.info("stopRefreshData");
+      log.info("stopRefreshData/" + vm.data.currentLibrary);
       $http.get(urlBase + "stopRefreshData").then(function(response) {
         vm.data.message = response.data;
         log.debug(response);
@@ -34,17 +34,28 @@
       if (vm.data.debugEnabled) {
         log.debug("getDataStatus");
       }
-      $http.get(urlBase + "getDataStatus").then(function(response) {
+      $http.get(urlBase + "getDataStatus/" + vm.data.currentLibrary).then(function(response) {
         vm.data.status = response.data;
         if (vm.settings.isOffline) {
           vm.settings.isOffline = false;
           vm.getDebugEnabled();
+          vm.refreshLibraries();
         }
       }, function() {
         vm.data['status'] = {};
         vm.settings.isOffline = true;
         vm.data.status.status = 'OFFLINE';
       });
+    }
+
+    vm.refreshLibraries = function() {
+      $http.get(urlBase + "getLibraries").then(function(response) {
+        vm.data.libraries = response.data;
+      });
+    }
+
+    vm.setCurrentLibrary = function(uuid) {
+      vm.data.currentLibrary = uuid;
     }
 
     vm.getDebugEnabled = function() {
