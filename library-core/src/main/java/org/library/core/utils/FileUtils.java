@@ -1,7 +1,12 @@
 package org.library.core.utils;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.ReaderInputStream;
+
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.FileTime;
 import java.security.DigestInputStream;
@@ -9,8 +14,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class FileUtils {
@@ -108,6 +112,21 @@ public class FileUtils {
                 Files.isDirectory(path) && isRecursive;
     }
 
+    public static void clearOldFiles(String extension, Path path, int maxCount) throws IOException {
+        DirectoryStream.Filter<Path> filter = createFilter(Arrays.asList(extension), false);
+        List<Path> files = getFilesListEx(path, filter);
+        files.sort((o1, o2) -> {
+            try {
+                return -getFileLastModifiedDate(o1).compareTo(getFileLastModifiedDate(o2));
+            } catch (IOException e) {
+                return 0;
+            }
+        });
+        for (int i = maxCount; i < files.size(); i++) {
+            Files.delete(files.get(i));
+        }
+    }
+
     private static String removeTrailingPeriod(final String extension) {
         int i = 0;
         while (extension.length() - i > 0 &&
@@ -150,4 +169,11 @@ public class FileUtils {
     }
 
 
+    public static String loadFileToString(URL url) throws IOException {
+        String result;
+        try (FileInputStream fis = new FileInputStream(url.getFile())) {
+            result = IOUtils.toString(fis);
+        }
+        return result;
+    }
 }

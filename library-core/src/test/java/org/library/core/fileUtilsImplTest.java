@@ -88,7 +88,7 @@ public class fileUtilsImplTest {
     @Test
     public void testGetPathExtNoExt() throws Exception {
         String expectedExt = "";
-        Path dirPath = tempDir.newFile("test1......" ).toPath();
+        Path dirPath = tempDir.newFile("test1......").toPath();
         String resultExt = FileUtils.getPathExt(dirPath);
         assertEquals(expectedExt, resultExt);
     }
@@ -147,6 +147,15 @@ public class fileUtilsImplTest {
         Files.write(path, testString.getBytes(), StandardOpenOption.APPEND);
         String md5Hash = FileUtils.getFileMD5Hash(path);
         assertTrue(md5Hash.length() == 32);
+    }
+
+    @Test
+    public void clearOldFiles() throws Exception {
+        String ext = ".bak";
+        for (int i = 0; i < 100; i++) {
+            tempDir.newFile("test" + i + ext);
+        }
+        FileUtils.clearOldFiles(ext, tempDir.getRoot().toPath(), 50);
     }
 
 }

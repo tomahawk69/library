@@ -4,9 +4,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.core.utils.DateUtils;
+import org.library.core.utils.FileUtils;
 import org.library.entities.FileInfo;
 import org.springframework.stereotype.Repository;
 
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -18,26 +22,25 @@ class DataStorageSQLite implements DataStorage {
     private static final Logger LOGGER = LogManager.getLogger(DataStorageSQLite.class);
 
     static final String DB_NAME = ".db";
+    static final String BACKUP_EXT = ".dbak";
+    static final String DB_BACKUP_NAME = ".db_%d%02d%02d_%02d%02d%s";
     private Path dbPath;
-    private Connection connection;
-    static String checkTableSQL;
-    static String checkTableMetaSQL;
-    static String createTableSQL;
-    static String createIndexSQL;
-    static String createTableMetaSQL;
-    static String initTableMetaSQL;
 
+    private Connection connection;
     static String insertFileInfoSQL;
     static String deleteFileInfoSQL;
     static String updateFileInfoSQL;
     static String getFileInfoListSQL;
     static String getFileInfoCountSQL;
     static String getMetaSQL;
+    static String getDBVersionSQL;
     static String setMetaSQL;
-    static String clearFileInfoSQL;
 
+    static String clearFileInfoSQL;
     private static final String FILES_TABLE_NAME = "files";
     private static final String META_TABLE_NAME = "meta";
+
+    private static final String UPDATE_SCRIPT_PATH = "metadata/sqlite/%03d.sql";
 
     static {
         insertFileInfoSQL = new StringBuilder("insert into ")
@@ -71,35 +74,11 @@ class DataStorageSQLite implements DataStorage {
                 .append(Fields.FILE_MD5_FIELD.getDbFieldName()).append(", ")
                 .append(Fields.LAST_UPDATED_FIELD.getDbFieldName())
                 .append(" from ").append(FILES_TABLE_NAME).toString();
-        createTableSQL = new StringBuilder("create table ")
-                .append(FILES_TABLE_NAME).append(" (")
-                .append(Fields.UUID_FIELD.getDbFieldName()).append(" varchar(36) primary key not null, ")
-                .append(Fields.FILE_PATH_FIELD.getDbFieldName()).append(" varchar(1024) not null, ")
-                .append(Fields.FILE_NAME_FIELD.getDbFieldName()).append(" varchar(255) not null, ")
-                .append(Fields.FILE_SIZE_FIELD.getDbFieldName()).append(" integer null, ")
-                .append(Fields.FILE_DATE_FIELD.getDbFieldName()).append(" datetime null, ")
-                .append(Fields.FILE_MD5_FIELD.getDbFieldName()).append(" varchar(32) null, ")
-                .append(Fields.LAST_UPDATED_FIELD.getDbFieldName()).append(" datetime null)")
-                .toString();
-        createIndexSQL = new StringBuilder("CREATE INDEX ")
-                .append(FILES_TABLE_NAME).append("_").append(Fields.FILE_PATH_FIELD.getDbFieldName())
-                .append(" ON ").append(FILES_TABLE_NAME).append(" (")
-                .append(Fields.FILE_PATH_FIELD.getDbFieldName()).append(")").toString();
-        createTableMetaSQL = new StringBuilder("create table ")
-                .append(META_TABLE_NAME).append(" (")
-                .append(Fields.LAST_UPDATED_FIELD.getDbFieldName()).append(" datetime null, ")
-                .append(Fields.LAST_REFRESH_FIELD.getDbFieldName()).append(" datetime null)")
-                .toString();
-        checkTableSQL = String.format("SELECT count() FROM sqlite_master WHERE type='table' AND name='%s'",
-                FILES_TABLE_NAME);
-        checkTableMetaSQL = String.format("SELECT count() FROM sqlite_master WHERE type='table' AND name='%s'",
-                META_TABLE_NAME);
-        initTableMetaSQL = String.format("INSERT INTO %s (%s, %s) values(null, null)",
-                META_TABLE_NAME, Fields.LAST_UPDATED_FIELD.getDbFieldName(), Fields.LAST_REFRESH_FIELD.getDbFieldName());
         setMetaSQL = "UPDATE " + META_TABLE_NAME + " set %s = ?";
         getMetaSQL = String.format("SELECT %s, %s FROM %s", Fields.LAST_UPDATED_FIELD.getDbFieldName(), Fields.LAST_REFRESH_FIELD.getDbFieldName(), META_TABLE_NAME);
         getFileInfoCountSQL = String.format("SELECT count() FROM %s", FILES_TABLE_NAME);
         clearFileInfoSQL = "delete from " + FILES_TABLE_NAME;
+        getDBVersionSQL = "PRAGMA user_version";
     }
 
     @Override
@@ -235,7 +214,7 @@ class DataStorageSQLite implements DataStorage {
 
     @Override
     public void prepareDB() {
-        LOGGER.debug("Update database structure");
+        LOGGER.info("Update database structure");
         try {
             updateStructure();
         } catch (Exception e) {
@@ -250,30 +229,38 @@ class DataStorageSQLite implements DataStorage {
     /**
      * No upgrade is available
      */
-    void updateStructure() throws SQLException {
-        Object count = executeOneSelectStatement(checkTableSQL);
-        if ((int) count == 0) {
-            createStructure();
-        }
-        count = executeOneSelectStatement(checkTableMetaSQL);
-        if ((int) count == 0) {
-            createStructureMeta();
+    void updateStructure() throws SQLException, IOException {
+        Integer databaseVersion = (Integer) executeOneSelectStatement(getDBVersionSQL);
+        LOGGER.info("Current database version is " + databaseVersion);
+        String scriptPath = String.format(UPDATE_SCRIPT_PATH, databaseVersion);
+        URL url = getResourceURL(scriptPath);
+        if (url == null) {
+            LOGGER.info("No database updates are available");
+        } else {
+        do {
+            LOGGER.info("Starting applying script: " + scriptPath);
+            createStructure(getFileContent(url));
+            scriptPath = String.format(UPDATE_SCRIPT_PATH, ++databaseVersion);
+            url = getResourceURL(scriptPath);
+            }
+            while (url != null) ;
         }
     }
 
-    private void createStructureMeta() throws SQLException {
-        try (Connection connection = getConnection()) {
-            Statement statement = connection.createStatement();
-            statement.executeUpdate(createTableMetaSQL);
-            statement.executeUpdate(initTableMetaSQL);
-        }
+    public String getFileContent(URL url) throws IOException {
+        return FileUtils.loadFileToString(url);
     }
 
-    void createStructure() throws SQLException {
+    public URL getResourceURL(String scriptPath) {
+        return getClass().getClassLoader().getResource(scriptPath);
+    }
+
+    void createStructure(String sql) throws SQLException {
         try (Connection connection = getConnection()) {
             Statement statement = connection.createStatement();
-            statement.executeUpdate(createTableSQL);
-            statement.executeUpdate(createIndexSQL);
+            statement.executeUpdate(sql);
+        } catch (Exception ex) {
+            LOGGER.error("createStructure error", ex);
         }
     }
 
@@ -299,7 +286,11 @@ class DataStorageSQLite implements DataStorage {
     }
 
     String getDBUrl() {
-        return String.format("jdbc:sqlite:%s", Paths.get(dbPath.toString(), DB_NAME));
+        return String.format("jdbc:sqlite:%s", getDatabasePath());
+    }
+
+    public Path getDatabasePath() {
+        return Paths.get(dbPath.toString(), DB_NAME);
     }
 
     @Override
@@ -363,6 +354,49 @@ class DataStorageSQLite implements DataStorage {
         }
     }
 
+    @Override
+    public boolean backupDatabase() {
+        boolean result = false;
+        Path copyDbPath = getDatabaseBackupName();
+        if (Files.exists(copyDbPath)) {
+            LOGGER.info("Copy of database already exists: " + copyDbPath);
+        } else {
+            Path dbFilePath = getDatabasePath();
+            if (Files.exists(dbFilePath)) {
+                LOGGER.info("Creating copy of database: " + copyDbPath);
+                try {
+                    Files.copy(dbFilePath, copyDbPath);
+                    Files.setAttribute(copyDbPath, "dos:hidden", true);
+                    result = true;
+                    LOGGER.info("Copy created successfully");
+                    clearOldBackups(10);
+                } catch (IOException e) {
+                    LOGGER.error("backupDatabase error ", e);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.error("setAttribute error ", e);
+                }
+            }
+        }
+        return result;
+    }
+
+    public void clearOldBackups(int maxCountOfBackups) throws IOException {
+        FileUtils.clearOldFiles(BACKUP_EXT, dbPath, maxCountOfBackups);
+    }
+
+    private Path getDatabaseBackupName() {
+        LocalDateTime localDateTime = LocalDateTime.now();
+        return Paths.get(dbPath.toString(),
+                String.format(DB_BACKUP_NAME,
+                        localDateTime.getYear(),
+                        localDateTime.getMonthValue(),
+                        localDateTime.getDayOfMonth(),
+                        localDateTime.getHour(),
+                        localDateTime.getMinute(),
+                        BACKUP_EXT
+                ));
+    }
+
     private Map<String, Object> executeSelectStatement(String querySql) throws SQLException {
         Map<String, Object> result = new HashMap<>();
         try (Connection connection = getConnection()) {
@@ -402,4 +436,6 @@ class DataStorageSQLite implements DataStorage {
             LOGGER.error(ex);
         }
     }
+
+
 }

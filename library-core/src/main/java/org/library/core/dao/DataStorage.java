@@ -6,7 +6,6 @@ import org.library.entities.FileInfo;
 
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +34,8 @@ public interface DataStorage {
     Map<Fields, Object> getMeta();
 
     void setMeta(Fields field, Object value) throws SQLException;
+
+    boolean backupDatabase();
 
     enum Fields {
         UUID_FIELD("f_uuid"), FILE_PATH_FIELD("f_file_path"), FILE_NAME_FIELD("f_file_name"),

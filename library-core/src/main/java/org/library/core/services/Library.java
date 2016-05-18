@@ -56,7 +56,7 @@ public class Library implements Serializable {
 
     }
 
-    private boolean setDataStatus(DataStatus dataStatus) {
+    boolean setDataStatus(DataStatus dataStatus) {
         this.dataStatus = dataStatus;
         return true;
     }

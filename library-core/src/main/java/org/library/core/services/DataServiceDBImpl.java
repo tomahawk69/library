@@ -118,8 +118,9 @@ public class DataServiceDBImpl extends AbstractDataService {
     public void prepareDatabase() throws LibraryDatabaseException {
         LOGGER.info("prepareDatabase started");
         try {
+            dataStorage.backupDatabase();
             dataStorage.prepareDB();
-        } catch (LibraryDatabaseException e) {
+        } catch (Exception e) {
             LOGGER.error("prepareDatabase error", e);
             throw new LibraryDatabaseException(e);
         }

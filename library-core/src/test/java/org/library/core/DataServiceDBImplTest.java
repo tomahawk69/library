@@ -163,4 +163,16 @@ public class DataServiceDBImplTest {
         assertEquals(fileInfo1, result.get(0).getFileInfo());
         assertEquals(fileInfo2, result.get(1).getFileInfo());
     }
+
+    @Test
+    public void testPrepareDatabase() throws Exception {
+        DataStorage dataStorageMock = mock(DataStorage.class);
+        DataServiceDBImpl service = new DataServiceDBImpl(dataStorageMock);
+
+        service.prepareDatabase();
+
+        verify(dataStorageMock).backupDatabase();
+        verify(dataStorageMock).prepareDB();
+    }
+
 }

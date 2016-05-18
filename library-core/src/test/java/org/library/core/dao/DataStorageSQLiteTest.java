@@ -7,6 +7,7 @@ import org.junit.rules.TemporaryFolder;
 import org.library.core.utils.DateUtils;
 import org.library.entities.FileInfo;
 
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,46 +55,51 @@ public class DataStorageSQLiteTest {
         DataStorageSQLite service = spy(new DataStorageSQLite());
 
         Connection mockConnection = mock(Connection.class);
-        doReturn(mockConnection).when(service).getConnection();
-        doNothing().when(service).updateStructure();
-
         Statement mockStatement = mock(Statement.class);
+        String sql = "test sql";
+
+        doReturn(mockConnection).when(service).getConnection();
         doReturn(mockStatement).when(mockConnection).createStatement();
 
-        service.prepareDB();
-        service.createStructure();
+        service.createStructure(sql);
 
-        verify(mockStatement).executeUpdate(DataStorageSQLite.createTableSQL);
-        verify(mockStatement).executeUpdate(DataStorageSQLite.createIndexSQL);
+        verify(mockStatement).executeUpdate(sql);
     }
 
     @Test
     public void testUpdateStructurePositive() throws Exception {
         DataStorageSQLite service = spy(new DataStorageSQLite());
 
-        Connection mockConnection = mock(Connection.class);
-        doReturn(mockConnection).when(service).getConnection();
-        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableSQL);
-        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableMetaSQL);
-        doNothing().when(service).createStructure();
+        URL url1 = tempDir.newFile("test0").toURI().toURL();
+        URL url2 = tempDir.newFile("test1").toURI().toURL();
+        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.getDBVersionSQL);
+        doReturn(url1).when(service).getResourceURL(contains("000"));
+        doReturn(url2).when(service).getResourceURL(contains("001"));
+        doReturn(null).when(service).getResourceURL(contains("002"));
+        String sql1 = "0";
+        String sql2 = "1";
+        doReturn(sql1).when(service).getFileContent(url1);
+        doReturn(sql2).when(service).getFileContent(url2);
+        doReturn(null).when(service).getFileContent(null);
+        doNothing().when(service).createStructure(anyString());
 
-        service.prepareDB();
+        service.updateStructure();
 
-        verify(service).createStructure();
+        verify(service, times(2)).createStructure(anyString());
+        verify(service).createStructure(sql1);
+        verify(service).createStructure(sql2);
     }
 
     @Test
     public void testUpdateStructureNegative() throws Exception {
         DataStorageSQLite service = spy(new DataStorageSQLite());
 
-        Connection mockConnection = mock(Connection.class);
-        doReturn(mockConnection).when(service).getConnection();
-        doReturn(1).when(service).executeOneSelectStatement(DataStorageSQLite.checkTableSQL);
-        doNothing().when(service).createStructure();
+        doReturn(0).when(service).executeOneSelectStatement(DataStorageSQLite.getDBVersionSQL);
+        doReturn(null).when(service).getResourceURL(contains("0"));
 
-        service.prepareDB();
+        service.updateStructure();
 
-        verify(service, never()).createStructure();
+        verify(service, never()).createStructure(anyString());
     }
 
     @Test
