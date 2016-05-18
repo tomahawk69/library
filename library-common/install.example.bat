@@ -1,0 +1,1 @@
+mvn clean install -Dmaven.repo.local=<path to your local repository>
