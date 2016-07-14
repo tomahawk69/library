@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.library.core.utils.DateUtils;
-import org.library.entities.FileInfo;
+import org.library.common.entities.FileInfo;
 
 import java.net.URL;
 import java.nio.file.Files;

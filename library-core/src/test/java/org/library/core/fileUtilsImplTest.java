@@ -3,7 +3,7 @@ package org.library.core;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.library.core.utils.FileUtils;
+import org.library.common.utils.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.*;

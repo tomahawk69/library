@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.library.core.dao.DataStorage;
 import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.core.utils.DateUtils;
-import org.library.entities.FileInfo;
+import org.library.common.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

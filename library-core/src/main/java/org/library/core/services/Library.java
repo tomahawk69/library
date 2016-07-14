@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.common.entities.DataStatus;
 import org.library.core.exceptions.LibraryDatabaseException;
-import org.library.entities.FileInfo;
+import org.library.common.entities.FileInfo;
 import org.library.entities.LibraryMetadata;
 
 import java.io.Serializable;

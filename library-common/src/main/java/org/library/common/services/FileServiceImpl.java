@@ -1,12 +1,10 @@
-package org.library.core.services;
+package org.library.common.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.library.core.utils.FileUtils;
-import org.library.entities.FileInfo;
-import org.library.entities.FileInfoHelper;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
+import org.library.common.entities.FileInfo;
+import org.library.common.utils.FileInfoHelper;
+import org.library.common.utils.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -14,9 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Component()
-@Scope("prototype")
-class FileServiceImpl implements FileService {
+public class FileServiceImpl implements FileService {
     private static final Logger LOGGER = LogManager.getLogger(FileServiceImpl.class);
 
     @Override

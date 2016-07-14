@@ -3,6 +3,10 @@ package org.library.core.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.common.entities.DataStatus;
+import org.library.common.entities.FileInfo;
+import org.library.common.entities.FileType;
+import org.library.common.services.FileService;
+import org.library.common.utils.FileInfoHelper;
 import org.library.core.exceptions.LibraryDatabaseException;
 import org.library.entities.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -359,5 +363,9 @@ public class LibraryService {
             return;
         }
         library.checkAndSetDataStatus(DataStatus.CANCELLING, REFRESH_CANCEL_ALLOWED_STATUSES);
+    }
+
+    public void addLibrary(Map<String, String> metaData) {
+
     }
 }

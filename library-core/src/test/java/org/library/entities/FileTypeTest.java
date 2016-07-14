@@ -1,8 +1,8 @@
 package org.library.entities;
 
 import org.junit.Test;
+import org.library.common.entities.FileType;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

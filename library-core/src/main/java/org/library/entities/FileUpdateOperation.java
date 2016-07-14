@@ -1,5 +1,7 @@
 package org.library.entities;
 
+import org.library.common.entities.FileInfo;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileUpdateOperation {

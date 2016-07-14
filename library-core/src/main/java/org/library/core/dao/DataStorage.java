@@ -2,7 +2,7 @@ package org.library.core.dao;
 
 
 import org.library.core.exceptions.LibraryDatabaseException;
-import org.library.entities.FileInfo;
+import org.library.common.entities.FileInfo;
 
 import java.nio.file.Path;
 import java.sql.SQLException;

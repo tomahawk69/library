@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import javax.websocket.server.PathParam;
 import java.util.Collection;
 import java.util.Map;
 
@@ -64,4 +65,13 @@ class FacadeService {
         LOGGER.debug("getDebugEnabled");
         return String.valueOf(LoggingUtils.getDebugEnabled());
     }
+
+    @RequestMapping(value = "/addLibrary", produces= MediaType.APPLICATION_JSON_VALUE, method = POST)
+    @ResponseBody String addLibrary(@RequestParam Map<String, String> metaData) {
+        LOGGER.debug("add Library " + metaData);
+        libraryService.addLibrary(metaData);
+        return "true";
+    }
+
+
 }

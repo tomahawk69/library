@@ -1,7 +1,6 @@
-package org.library.core.utils;
+package org.library.common.utils;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.ReaderInputStream;
 
 import java.io.FileInputStream;
 import java.io.IOException;

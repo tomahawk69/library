@@ -17,6 +17,7 @@
 		<module>library-common</module>
 		<module>library-core</module>
 		<module>library-web</module>
-	</modules>
+        <module>library-parser</module>
+    </modules>
 
 </project>

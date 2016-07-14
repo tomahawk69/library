@@ -1,4 +1,4 @@
-package org.library.entities;
+package org.library.common.entities;
 
 import java.nio.file.Paths;
 import java.time.LocalDateTime;

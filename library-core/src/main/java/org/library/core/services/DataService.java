@@ -1,7 +1,7 @@
 package org.library.core.services;
 
 import org.library.core.exceptions.LibraryDatabaseException;
-import org.library.entities.FileInfo;
+import org.library.common.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
 
 import java.nio.file.Path;

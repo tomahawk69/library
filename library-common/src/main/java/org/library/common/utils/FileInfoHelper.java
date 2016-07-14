@@ -1,10 +1,9 @@
-package org.library.entities;
+package org.library.common.utils;
 
-import org.library.core.utils.FileUtils;
+import org.library.common.entities.FileInfo;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HashMap;

@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.library.core.dao.DataStorage;
 import org.library.core.services.DataServiceDBImpl;
-import org.library.entities.FileInfo;
+import org.library.common.entities.FileInfo;
 import org.library.entities.FileUpdateOperation;
 
 import java.sql.SQLException;
