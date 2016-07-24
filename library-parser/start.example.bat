@@ -1,0 +1,1 @@
+mvn spring-boot:run -Dmaven.repo.local=<path to your local repository> -Drun.arguments="<path to folder with files>"
