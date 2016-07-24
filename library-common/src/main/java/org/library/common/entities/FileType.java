@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public enum FileType {
-    FB2(".fb2", false), EPUB(".epub", false), ZIP("zip", true);
+    FB2(".fb2", false), EPUB(".epub", false), ZIP(".zip", true);
 
     private final String extension;
     private final boolean isArchive;

@@ -28,9 +28,12 @@ How to start parser:
 1. clean + install library-common
 2. go to library-scanner
 3. copy start.example.bat to start.bat and update <parameters> there
-4. clean + spring-boot:run on library-scanner (don't forget to add folder to scan in run configuration)
+4. go to library-scanner\resources
+5. copy application.properties.example to application.properties if last doesn't exist
+6. update params in application.properties
+7. clean + spring-boot:run on library-scanner (don't forget to add folder to scan in run configuration)
 or
-4. library-scanner\start.bat
+7. library-scanner\start.bat
 
 Active functions (web):
 1. Frontend with Main and Dashboard views  

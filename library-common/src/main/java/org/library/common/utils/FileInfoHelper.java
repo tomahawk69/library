@@ -29,6 +29,14 @@ public class FileInfoHelper {
         fileInfo.setModifiedDate(fileDate);
     }
 
+    public static void updateFileInfo(Path path, FileInfo fileInfo, boolean calcMD5hash) throws IOException, NoSuchAlgorithmException {
+        fileInfo.setFileSize(FileUtils.getFileSize(path));
+        fileInfo.setModifiedDate(FileUtils.getFileLastModifiedDate(path));
+        if (calcMD5hash) {
+            fileInfo.setMd5Hash(FileUtils.getFileMD5Hash(path));
+        }
+    }
+
     public static boolean checkFileInfoChanged(FileInfo fileInfo, Long fileSize, LocalDateTime fileDate) {
         return !(fileSize.equals(fileInfo.getFileSize()) && fileDate.equals(fileInfo.getModifiedDate()));
     }

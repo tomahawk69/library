@@ -1,16 +1,9 @@
-package org.library.core.services;
+package org.library.common.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
 import java.util.concurrent.Semaphore;
 
-@Component
-@Scope("singleton")
 public class SemaphoreService {
     private final Logger LOGGER = LogManager.getLogger(SemaphoreService.class);
     private final Semaphore globalAccessControl;
@@ -18,8 +11,7 @@ public class SemaphoreService {
     private final int maxFilesThreadsCount;
     private final int maxAccessThreadsCount;
 
-    @Autowired
-    public SemaphoreService(@Value("${threads.global.count}") int threadsCount, @Value("${threads.files.count}") int threadsFilesCount) {
+    public SemaphoreService(int threadsCount, int threadsFilesCount) {
         this.maxAccessThreadsCount = threadsCount;
         this.maxFilesThreadsCount = threadsFilesCount;
         this.globalAccessControl = new Semaphore(threadsCount);

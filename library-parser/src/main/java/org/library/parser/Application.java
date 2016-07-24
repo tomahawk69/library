@@ -2,18 +2,17 @@ package org.library.parser;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.library.common.entities.FileType;
 import org.library.common.utils.FileUtils;
-import org.library.common.utils.ParsedFileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -26,6 +25,7 @@ import org.library.common.services.*;
 @SpringBootApplication
 public class Application implements ApplicationRunner {
     private static Logger LOGGER = LogManager.getLogger(Application.class);
+    private SemaphoreService semaphoreService;
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
@@ -41,15 +41,25 @@ public class Application implements ApplicationRunner {
         return new ParseFileService();
     }
 
+    @Bean
+    public synchronized SemaphoreService getSemaphoreService(@Value("${threads.global.count}") int threadsCount,
+                                                             @Value("${threads.files.count}") int threadsFilesCount) {
+        if (semaphoreService == null) {
+            semaphoreService = new SemaphoreService(threadsCount, threadsFilesCount);
+        }
+        return semaphoreService;
+    }
+
     @Autowired
     private ParserFactory parserFactory;
 
     @Override
     public void run(ApplicationArguments applicationArguments) throws Exception {
         System.out.println("===Library parserImpl===");
+        System.out.print("Available extensions: ");
+        FileType.getExtensions().stream().forEach(ex -> System.out.print(ex.toUpperCase().substring(1) + " "));
+        System.out.println("");
         List<String> paths = applicationArguments.getNonOptionArgs();
-        LOGGER.debug("Simple arguments: " + paths);
-        LOGGER.debug("Named arguments: " + applicationArguments.getOptionNames());
         if (paths.size() == 0) {
             System.out.println("Invalid arguments");
             System.out.println("Usage: <app> <path_to_library>");
