@@ -175,4 +175,19 @@ public class FileUtils {
         }
         return result;
     }
+
+    /**
+     * Convert string to path and return it if path exists and is folder
+     * @param stringPath string representation of path
+     * @return path
+     */
+    public static Path stringToExistingDirectoryPath(String stringPath) {
+        Path path = Paths.get(stringPath);
+        if (Files.exists(path) && Files.isDirectory(path)) {
+            return path;
+        } else {
+            return null;
+        }
+    }
+
 }

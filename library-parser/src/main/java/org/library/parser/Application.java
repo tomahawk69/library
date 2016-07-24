@@ -2,6 +2,8 @@ package org.library.parser;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.library.common.utils.FileUtils;
+import org.library.common.utils.ParsedFileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -18,6 +20,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
 import org.library.common.services.*;
 
 @SpringBootApplication
@@ -31,6 +34,11 @@ public class Application implements ApplicationRunner {
     @Bean
     public FileService fileService() {
         return new FileServiceImpl();
+    }
+
+    @Bean
+    public ParseFileService parseFileService() {
+        return new ParseFileService();
     }
 
     @Autowired
@@ -49,16 +57,18 @@ public class Application implements ApplicationRunner {
         }
         LOGGER.info("Paths: " + paths);
         runParsers(paths);
-
     }
 
     private boolean runParsers(List<String> paths) {
+        // get list of files
         ExecutorService executor = Executors.newCachedThreadPool();
         List<Future<Boolean>> futures = new LinkedList<>();
-        for (String stringPath: paths) {
-            Path path = stringToExistingDirectoryPath(stringPath);
+        for (String stringPath : paths) {
+            Path path = FileUtils.stringToExistingDirectoryPath(stringPath);
             if (path != null) {
                 futures.add(executor.submit(parserFactory.createParser(path)));
+            } else {
+                LOGGER.error("Path isn't a folder or doesn't exists: " + stringPath);
             }
         }
         executor.shutdown();
@@ -69,7 +79,7 @@ public class Application implements ApplicationRunner {
                     result = false;
                 }
             } catch (InterruptedException e) {
-                LOGGER.error("Interruped: ", e);
+                LOGGER.error("Interrupted: ", e);
             } catch (ExecutionException e) {
                 LOGGER.error("Exception: ", e);
             }
@@ -77,13 +87,4 @@ public class Application implements ApplicationRunner {
         return result;
     }
 
-    private Path stringToExistingDirectoryPath(String stringPath) {
-        Path path = Paths.get(stringPath);
-        if (Files.exists(path) && Files.isDirectory(path)) {
-            return path;
-        } else {
-            LOGGER.error("Not exists or not a directory: " + path);
-            return null;
-        }
-    }
 }

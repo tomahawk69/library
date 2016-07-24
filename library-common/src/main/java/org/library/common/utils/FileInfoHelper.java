@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class FileInfoHelper {
 
@@ -40,10 +41,6 @@ public class FileInfoHelper {
      * @return map of path:file info
      */
     public static Map<Path, FileInfo> listOfFileInfoToMap(final Path path, final List<FileInfo> fileInfoList) {
-        Map<Path, FileInfo> result = new HashMap<>();
-        for (FileInfo fileInfo : fileInfoList) {
-            result.put(path.resolve(fileInfo.getPath()), fileInfo);
-        }
-        return result;
+        return fileInfoList.stream().collect(Collectors.toMap(x -> path.resolve(x.getPath()), x -> x));
     }
 }
