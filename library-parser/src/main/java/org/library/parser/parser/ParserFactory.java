@@ -1,8 +1,9 @@
-package org.library.parser;
+package org.library.parser.parser;
 
 import org.library.common.services.FileService;
 import org.library.common.services.ParseFileService;
 import org.library.common.services.SemaphoreService;
+import org.library.parser.services.ParserStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,9 @@ public class ParserFactory {
     @Autowired
     SemaphoreService semaphoreService;
 
+    @Autowired
+    ParserStorageService parserStorageService;
+
     private boolean calcMD5hash;
     private String allowedExtensions;
 
@@ -38,7 +42,7 @@ public class ParserFactory {
     }
 
     public Parser createParser(Path path) {
-        ParserImpl parser = new ParserImpl(fileService, parseFileService, semaphoreService, path);
+        ParserImpl parser = new ParserImpl(fileService, parseFileService, semaphoreService, parserStorageService, path);
         parser.setCalcMD5hash(calcMD5hash);
         parser.setAllowedExtensions(getAllowedExtensionsList(allowedExtensions));
         return parser;

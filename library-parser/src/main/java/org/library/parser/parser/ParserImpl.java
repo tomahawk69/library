@@ -1,4 +1,4 @@
-package org.library.parser;
+package org.library.parser.parser;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -9,6 +9,7 @@ import org.library.common.services.FileService;
 import org.library.common.services.ParseFileService;
 import org.library.common.services.SemaphoreService;
 import org.library.common.utils.FileInfoHelper;
+import org.library.parser.services.ParserStorageService;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -23,19 +24,23 @@ public class ParserImpl implements Parser {
     private final FileService fileService;
     private final ParseFileService parseFileService;
     private final SemaphoreService semaphoreService;
+    private final ParserStorageService parserStorageService;
     private List<String> allowedExtensions;
     private boolean calcMD5hash;
+    private String databaseId;
 
-    ParserImpl(FileService fileService, ParseFileService parseFileService, SemaphoreService semaphoreService, Path path) {
+    ParserImpl(FileService fileService, ParseFileService parseFileService, SemaphoreService semaphoreService, ParserStorageService parserStorageService, Path path) {
         this.path = path;
         this.fileService = fileService;
         this.parseFileService = parseFileService;
         this.semaphoreService = semaphoreService;
+        this.parserStorageService = parserStorageService;
     }
 
     @Override
     public Boolean call() throws Exception {
         Boolean result = true;
+        registerLibrary(path);
         ExecutorService serviceIO = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
         List<CompletableFuture<ParsedFile>> futures =
                 getFilesList().parallelStream()
@@ -50,6 +55,14 @@ public class ParserImpl implements Parser {
         LOGGER.info("Parsed files: " + parsedFiles.size());
         LOGGER.info("Erroneous: " + parsedFiles.stream().filter(p -> p.getException() != null).count());
         return result;
+    }
+
+    private void registerLibrary(Path path) {
+        LOGGER.debug("Registering library " + path);
+        parserStorageService.initLibrary();
+        databaseId = parserStorageService.registerLibrary(path.toString());
+        LOGGER.debug("Registered library " + databaseId);
+
     }
 
     private <ParsedFile> CompletableFuture<List<ParsedFile>> allDone(List<CompletableFuture<ParsedFile>> futures) {
