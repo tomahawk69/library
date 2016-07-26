@@ -12,7 +12,6 @@ import org.library.common.utils.FileInfoHelper;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -37,10 +36,29 @@ public class ParserImpl implements Parser {
     @Override
     public Boolean call() throws Exception {
         Boolean result = true;
-        List<Path> files = getFilesList();
-        List<FileInfo> fileInfos = createFileInfos(files);
-        List<ParsedFile> parsedFiles = parseFiles(fileInfos);
+        ExecutorService serviceIO = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
+        List<CompletableFuture<ParsedFile>> futures =
+                getFilesList().parallelStream()
+                        .map(p ->  new FileInfo(p.toString()))
+                        .map(fi -> parseFileService.fileInfoToParsedFile(path, fi))
+                        .map(pf -> CompletableFuture.supplyAsync(() -> updateFileInfo(pf), serviceIO))
+                        .map(fi -> fi.thenApplyAsync(this::parseXML, serviceIO))
+                        .collect(Collectors.toList());
+        List<ParsedFile> parsedFiles = allDone(futures).join();
+        serviceIO.shutdown();
+        serviceIO.awaitTermination(1, TimeUnit.SECONDS);
+        LOGGER.info("Parsed files: " + parsedFiles.size());
+        LOGGER.info("Erroneous: " + parsedFiles.stream().filter(p -> p.getException() != null).count());
         return result;
+    }
+
+    private <ParsedFile> CompletableFuture<List<ParsedFile>> allDone(List<CompletableFuture<ParsedFile>> futures) {
+        CompletableFuture<Void> allDoneFuture =
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+        return allDoneFuture.thenApply(v ->
+                futures.stream()
+                        .map(f -> f.join())
+                        .collect(Collectors.toList()));
     }
 
     private List<Path> getFilesList() throws IOException {
@@ -65,87 +83,29 @@ public class ParserImpl implements Parser {
         this.calcMD5hash = calcMD5hash;
     }
 
-    private List<FileInfo> createFileInfos(List<Path> files) {
-        LOGGER.info("createFileInfos started " + this);
-        ExecutorService service = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
-        List<CompletableFuture<FileInfo>> result =
-            files.stream().map(path ->
-                    CompletableFuture.supplyAsync(() -> updateFileInfo(path), service))
-                    .collect(Collectors.toList());
-        service.shutdown();
-        while (!service.isTerminated()) {
-            try {
-                service.awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                LOGGER.error("Terminated", e);
-            }
-        }
-        LOGGER.info("createFileInfos ended " + this);
-        LOGGER.info("Updated " + result.size() + " files");
-        return result.stream().filter(CompletableFuture::isDone).map(f -> f.getNow(null)).filter(i -> i != null).collect(Collectors.toList());
-    }
-
-    public FileInfo updateFileInfo(final Path path) {
-        FileInfo fileInfo = new FileInfo(path.toString());
+    public ParsedFile updateFileInfo(final ParsedFile parsedFile) {
         semaphoreService.acquireFilesAccess();
         try {
-            FileInfoHelper.updateFileInfo(path, fileInfo, calcMD5hash);
+            FileInfoHelper.updateFileInfo(path, parsedFile.getFileInfo(), calcMD5hash);
         } catch (Exception e) {
-            LOGGER.error("Cannot update file info " + fileInfo, e);
+            LOGGER.error("Cannot update file info " + parsedFile.getFileInfo(), e);
         } finally {
             semaphoreService.releaseFilesAccess();
         }
-        return fileInfo;
+        return parsedFile;
     }
 
 
-    private List<ParsedFile> parseFiles(List<FileInfo> fileInfos) {
-        LOGGER.info("parseFiles started");
-        List<Future<ParsedFile>> futures = addFilesToParser(fileInfos);
-        List<ParsedFile> result = futuresToParsedFiles(futures);
-        LOGGER.info("parseFiles ended");
-        LOGGER.info("Parsed " + result.size() + " files");
-        return result;
-    }
-
-    private List<ParsedFile> futuresToParsedFiles(List<Future<ParsedFile>> futures) {
-        List<ParsedFile> result = new ArrayList<>();
-        futures.stream().filter(Future::isDone).forEach(future -> {
-            try {
-                result.add(future.get());
-            } catch (InterruptedException | ExecutionException e) {
-                LOGGER.error("Future get error", e);
-            }
-        });
-        return result;
-    }
-
-    private List<Future<ParsedFile>> addFilesToParser(List<FileInfo> files) {
-        LOGGER.info("addFilesToParser started");
-        ExecutorService executorService = Executors.newFixedThreadPool(semaphoreService.getMaxAccessThreadsCount());
-        List<Future<ParsedFile>> futures = new ArrayList<>();
-        files.stream().forEach(
-                i -> futures.add(executorService.submit(() -> {
-                            ParsedFile parsedFile = parseFileService.fileInfoToParsedFile(path.resolve(i.getPath()), i);
-                            semaphoreService.acquireFilesAccess();
-                            try {
-                                parseFileService.parseXml(parsedFile);
-                            } finally {
-                                semaphoreService.releaseFilesAccess();
-                            }
-                            return parsedFile;
-                        }
-                )));
-        executorService.shutdown();
-        while (!executorService.isTerminated()) {
-            try {
-                executorService.awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                LOGGER.error("Terminated", e);
-            }
+    private ParsedFile parseXML(ParsedFile parsedFile) {
+        semaphoreService.acquireFilesAccess();
+        try {
+            parseFileService.parseFile(parsedFile);
+        } catch (Exception ex) {
+            parsedFile.addException(ex);
+        } finally {
+            semaphoreService.releaseFilesAccess();
         }
-        LOGGER.info("addFilesToParser ended");
-        return futures;
+        return parsedFile;
     }
 
     @Override
@@ -154,5 +114,4 @@ public class ParserImpl implements Parser {
                 "path=" + path +
                 '}';
     }
-
 }

@@ -1,12 +1,16 @@
 package org.library.common.utils;
 
+import java.io.IOException;
 import java.util.Base64;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.common.entities.ParsedFile;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,10 +31,9 @@ import static org.library.common.utils.ParseStage.*;
  * - notes and comments don't any validation for empty or head sections
  * - section titles doesn't support strip or resolve links to notes/comments
  */
-public class Fb2ParseHandler extends FileParseHandler {
-    private static final Logger LOGGER = LogManager.getLogger(Fb2ParseHandler.class);
-
+public class Fb2ParserHandler extends DefaultHandler {
     private static final List<String> newLineTitles = Arrays.asList("p", "empty-line");
+
     public static final String TAG_IMAGE_CONTENT_TYPE = "content-type";
     public static final String TAG_ELEMENT_ID = "id";
     public static final String TAG_ELEMENT_NAME = "name";
@@ -58,7 +61,7 @@ public class Fb2ParseHandler extends FileParseHandler {
     private StringBuilder cover = new StringBuilder();
     private String nameSpace;
 
-    public Fb2ParseHandler(ParsedFile parsedFile) {
+    public Fb2ParserHandler(ParsedFile parsedFile) {
         this.parsedFile = parsedFile;
     }
 
@@ -292,6 +295,7 @@ public class Fb2ParseHandler extends FileParseHandler {
     public String getCoverName() {
         return coverName;
     }
+
 }
 
 enum ParseStage {

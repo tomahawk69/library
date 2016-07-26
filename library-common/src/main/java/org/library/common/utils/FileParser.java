@@ -2,15 +2,16 @@ package org.library.common.utils;
 
 import org.library.common.entities.FileType;
 import org.library.common.entities.ParsedFile;
-import org.xml.sax.helpers.DefaultHandler;
 
-public abstract class FileParseHandler extends DefaultHandler {
+public interface FileParser {
 
-    public static DefaultHandler createHandler(FileType fileType, ParsedFile parsedFile) {
+    static FileParser createHandler(FileType fileType) {
         switch (fileType) {
-            case FB2: return new Fb2ParseHandler(parsedFile);
+            case FB2: return new Fb2Parser();
             default: throw new IllegalArgumentException("Given File Type is not supported: " + fileType);
         }
     }
+
+    boolean parse(ParsedFile parsedFile);
 
 }

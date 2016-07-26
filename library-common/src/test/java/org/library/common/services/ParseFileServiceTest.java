@@ -36,7 +36,7 @@ public class ParseFileServiceTest {
         FileInfo fileInfo = new FileInfo(filePath.toString());
         ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
 
-        parsedFileService.parseXml(parsedFile);
+        parsedFileService.parseFile(parsedFile);
 
         assertNotNull(parsedFile.getHeader());
         assertNotEquals(parsedFile.getHeader(), ParsedFile.Element.Empty);

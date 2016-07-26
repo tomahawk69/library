@@ -35,7 +35,7 @@ public class Fb2ParseHandlerTest {
     public void checkIsCoverPositive() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
         ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
-        Fb2ParseHandler handler = new Fb2ParseHandler(parsedFile);
+        Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
         ParsedFile.Element element = new ParsedFile.Element("image");
         String imageLink = "link to the image";
@@ -48,7 +48,7 @@ public class Fb2ParseHandlerTest {
     public void checkIsCoverPositiveNegative() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
         ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
-        Fb2ParseHandler handler = new Fb2ParseHandler(parsedFile);
+        Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
         ParsedFile.Element element = new ParsedFile.Element("image");
         assertFalse(handler.checkIsCover(element));
@@ -58,7 +58,7 @@ public class Fb2ParseHandlerTest {
     public void checkIsCoverNegative() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
         ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
-        Fb2ParseHandler handler = new Fb2ParseHandler(parsedFile);
+        Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
         ParsedFile.Element element = new ParsedFile.Element("other then");
         assertFalse(handler.checkIsCover(element));
@@ -68,7 +68,7 @@ public class Fb2ParseHandlerTest {
     public void checkIsCoverNullElement() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
         ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
-        Fb2ParseHandler handler = new Fb2ParseHandler(parsedFile);
+        Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         expectedException.expect(NullPointerException.class);
         handler.checkIsCover(null);
     }

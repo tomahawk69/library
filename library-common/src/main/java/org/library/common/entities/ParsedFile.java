@@ -1,9 +1,10 @@
 package org.library.common.entities;
 
+import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.*;
 
-public class ParsedFile {
+public class ParsedFile implements Serializable {
 
     private final Path path;
     private ProcessState state = ProcessState.None;
@@ -14,6 +15,8 @@ public class ParsedFile {
     private Cover cover = new Cover();
     private int notesCount;
     private int commentsCount;
+
+    private transient Exception exception;
 
     public ParsedFile(Path path, FileInfo fileInfo) {
         this.path = path;
@@ -85,6 +88,18 @@ public class ParsedFile {
 
     public Cover getCover() {
         return cover;
+    }
+
+    public void addException(Exception ex) {
+        if (exception == null) {
+            exception = new Exception(ex);
+        } else {
+            exception.addSuppressed(ex);
+        }
+    }
+
+    public Exception getException() {
+        return exception;
     }
 
     public static class Element {

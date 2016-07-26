@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.library.common.entities.FileInfo;
 import org.library.common.entities.ParsedFile;
-import org.library.common.utils.FileParseHandler;
+import org.library.common.utils.FileParser;
 import org.library.common.utils.ParsedFileUtils;
 import org.xml.sax.SAXException;
 
@@ -29,26 +29,20 @@ public class ParseFileService {
         return parsedFile;
     }
 
-    public void parseXml(ParsedFile parsedFile) {
-        if (parseXmlInt(parsedFile)) {
+    public void parseFile(ParsedFile parsedFile) {
+        if (parseFileInt(parsedFile)) {
             parsedFile.setState(ParsedFile.ProcessState.XMLProcessed);
         }
     }
 
-    private boolean parseXmlInt(ParsedFile parsedFile) {
+    private boolean parseFileInt(ParsedFile parsedFile) {
         boolean result = false;
         try {
-            SAXParser parser = ParsedFileUtils.getSaxParser();
-            parser.parse(parsedFile.getPath().toFile(), FileParseHandler.createHandler(parsedFile.getFileInfo().getFileType(), parsedFile));
-            result = true;
-        } catch (ParserConfigurationException e) {
-            LOGGER.error("ParserConfigurationException: ", e);
-        } catch (SAXException e) {
-            LOGGER.error("Parsing exception: ", e);
-        } catch (IllegalArgumentException e) {
-            LOGGER.error("Cannot create parser: ", e);
-        } catch (IOException e) {
-            LOGGER.error("IOException: ", e);
+            FileParser parser = FileParser.createHandler(parsedFile.getFileInfo().getFileType());
+            result = parser.parse(parsedFile);
+        } catch (IllegalArgumentException ex) {
+            parsedFile.addException(ex);
+            LOGGER.error("Cannot parse file " +  parsedFile.getFileInfo().getPath());
         }
         return result;
     }
