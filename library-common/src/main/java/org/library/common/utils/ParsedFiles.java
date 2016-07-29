@@ -7,7 +7,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-public class ParsedFileUtils {
+public class ParsedFiles {
 
     public static SAXParser getSaxParser() throws ParserConfigurationException, SAXException {
         return SAXParserFactory.newInstance().newSAXParser();

@@ -15,10 +15,6 @@ public class Library {
     public Library() {
     }
 
-    public Library(String id) {
-        this.id = id;
-    }
-
     public String getPath() {
         return path;
     }

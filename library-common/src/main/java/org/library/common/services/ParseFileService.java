@@ -5,12 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.library.common.entities.FileInfo;
 import org.library.common.entities.ParsedFile;
 import org.library.common.utils.FileParser;
-import org.library.common.utils.ParsedFileUtils;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import java.io.IOException;
 import java.nio.file.Path;
 
 public class ParseFileService {
@@ -19,27 +14,27 @@ public class ParseFileService {
     public ParseFileService() {
     }
 
-    public ParsedFile fileInfoToParsedFile(Path basePath, FileInfo fileInfo) {
-        ParsedFile parsedFile = new ParsedFile(basePath.resolve(fileInfo.getPath()), fileInfo);
+    public ParsedFile fileInfoToParsedFile(FileInfo fileInfo) {
+        ParsedFile parsedFile = new ParsedFile(fileInfo);
         return parsedFile;
     }
 
-    public ParsedFile pathToParsedFile(Path path) {
-        ParsedFile parsedFile = new ParsedFile(path, new FileInfo(path.toString()));
+    public ParsedFile pathToParsedFile(Path basepath, Path path) {
+        ParsedFile parsedFile = new ParsedFile(basepath.relativize(path).toString());
         return parsedFile;
     }
 
-    public void parseFile(ParsedFile parsedFile) {
-        if (parseFileInt(parsedFile)) {
+    public void parseFile(Path basePath, ParsedFile parsedFile) {
+        if (parseFileInt(basePath, parsedFile)) {
             parsedFile.setState(ParsedFile.ProcessState.XMLProcessed);
         }
     }
 
-    private boolean parseFileInt(ParsedFile parsedFile) {
+    private boolean parseFileInt(Path basePath, ParsedFile parsedFile) {
         boolean result = false;
         try {
             FileParser parser = FileParser.createHandler(parsedFile.getFileInfo().getFileType());
-            result = parser.parse(parsedFile);
+            result = parser.parse(basePath, parsedFile);
         } catch (IllegalArgumentException ex) {
             parsedFile.addException(ex);
             LOGGER.error("Cannot parse file " +  parsedFile.getFileInfo().getPath());

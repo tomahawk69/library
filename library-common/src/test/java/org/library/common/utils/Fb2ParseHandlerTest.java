@@ -34,7 +34,7 @@ public class Fb2ParseHandlerTest {
     @Test
     public void checkIsCoverPositive() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
-        ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
+        ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
         ParsedFile.Element element = new ParsedFile.Element("image");
@@ -47,7 +47,7 @@ public class Fb2ParseHandlerTest {
     @Test
     public void checkIsCoverPositiveNegative() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
-        ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
+        ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
         ParsedFile.Element element = new ParsedFile.Element("image");
@@ -57,7 +57,7 @@ public class Fb2ParseHandlerTest {
     @Test
     public void checkIsCoverNegative() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
-        ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
+        ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
         ParsedFile.Element element = new ParsedFile.Element("other then");
@@ -67,7 +67,7 @@ public class Fb2ParseHandlerTest {
     @Test
     public void checkIsCoverNullElement() throws Exception {
         FileInfo fileInfo = new FileInfo(filePath.toString());
-        ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
+        ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         expectedException.expect(NullPointerException.class);
         handler.checkIsCover(null);

@@ -8,16 +8,17 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class Fb2Parser implements FileParser {
     private static Logger LOGGER = LogManager.getLogger(Fb2Parser.class);
 
     @Override
-    public boolean parse(ParsedFile parsedFile) {
+    public boolean parse(Path basePath, ParsedFile parsedFile) {
         boolean result = false;
         try {
-            SAXParser parser = ParsedFileUtils.getSaxParser();
-            parser.parse(parsedFile.getPath().toFile(), new Fb2ParserHandler(parsedFile));
+            SAXParser parser = ParsedFiles.getSaxParser();
+            parser.parse(basePath.resolve(parsedFile.getFileInfo().getPath()).toFile(), new Fb2ParserHandler(parsedFile));
             result = true;
         } catch (ParserConfigurationException e) {
             LOGGER.error("ParserConfigurationException: ", e);

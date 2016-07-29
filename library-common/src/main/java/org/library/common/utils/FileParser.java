@@ -3,6 +3,8 @@ package org.library.common.utils;
 import org.library.common.entities.FileType;
 import org.library.common.entities.ParsedFile;
 
+import java.nio.file.Path;
+
 public interface FileParser {
 
     static FileParser createHandler(FileType fileType) {
@@ -12,6 +14,6 @@ public interface FileParser {
         }
     }
 
-    boolean parse(ParsedFile parsedFile);
+    boolean parse(Path basePath, ParsedFile parsedFile);
 
 }

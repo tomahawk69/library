@@ -1,16 +1,12 @@
 package org.library.common.utils;
 
-import java.io.IOException;
 import java.util.Base64;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
 import org.library.common.entities.ParsedFile;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
 import java.util.Arrays;
 import java.util.List;
 
@@ -137,7 +133,7 @@ public class Fb2ParserHandler extends DefaultHandler {
                 break;
             }
             case Head: {
-                currentElement = ParsedFileUtils.addElement(currentElement, qName);
+                currentElement = ParsedFiles.addElement(currentElement, qName);
                 proceedAttributes(currentElement, attributes);
                 isCoverExists = isCoverExists || checkIsCover(currentElement);
                 break;
@@ -273,7 +269,7 @@ public class Fb2ParserHandler extends DefaultHandler {
     void proceedAttributes(ParsedFile.Element element, Attributes attributes) {
         if (attributes.getLength() > 0) {
             for (int i = 0; i < attributes.getLength(); i++) {
-                ParsedFileUtils.addAttribute(element, normalizeAttributeName(attributes.getQName(i)), attributes.getValue(i));
+                ParsedFiles.addAttribute(element, normalizeAttributeName(attributes.getQName(i)), attributes.getValue(i));
             }
         }
     }

@@ -1,12 +1,15 @@
 package org.library.common.entities;
 
-import java.io.Serializable;
-import java.nio.file.Path;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+
 import java.util.*;
 
-public class ParsedFile implements Serializable {
+public class ParsedFile {
 
-    private final Path path;
+    @Id
+    private String id;
+
     private ProcessState state = ProcessState.None;
     private FileInfo fileInfo;
 
@@ -16,10 +19,17 @@ public class ParsedFile implements Serializable {
     private int notesCount;
     private int commentsCount;
 
-    private transient Exception exception;
+    @Transient
+    private Exception exception;
 
-    public ParsedFile(Path path, FileInfo fileInfo) {
-        this.path = path;
+    public ParsedFile() {
+    }
+
+    public ParsedFile(String path) {
+        this.fileInfo = new FileInfo(path);
+    }
+
+    public ParsedFile(FileInfo fileInfo) {
         this.fileInfo = fileInfo;
     }
 
@@ -29,10 +39,6 @@ public class ParsedFile implements Serializable {
 
     public void setState(ProcessState state) {
         this.state = state;
-    }
-
-    public Path getPath() {
-        return path;
     }
 
     public FileInfo getFileInfo() {
@@ -107,8 +113,8 @@ public class ParsedFile implements Serializable {
 
         private final String name;
         private List<Element> elements = new ArrayList<>();
-
         private String value;
+        @Transient
         private Element parent;
         private Map<String, String> attributes = new HashMap<>();
 
@@ -199,6 +205,7 @@ public class ParsedFile implements Serializable {
 
         private final Title title = new Title();
         private List<Section> sections = new LinkedList<>();
+        @Transient
         private Section parent;
 
         Section() {
@@ -234,8 +241,7 @@ public class ParsedFile implements Serializable {
     @Override
     public String toString() {
         return "ParsedFile{" +
-                "path=" + path +
-                ", state=" + state +
+                "state=" + state +
                 ", fileInfo=" + fileInfo +
                 ", header=" + header +
                 ", section=" + section +

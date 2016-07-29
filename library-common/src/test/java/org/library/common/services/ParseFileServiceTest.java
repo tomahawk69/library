@@ -12,7 +12,6 @@ import java.io.FileOutputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 
 import static org.junit.Assert.*;
 
@@ -34,9 +33,9 @@ public class ParseFileServiceTest {
         ParseFileService parsedFileService = new ParseFileService();
 
         FileInfo fileInfo = new FileInfo(filePath.toString());
-        ParsedFile parsedFile = new ParsedFile(filePath, fileInfo);
+        ParsedFile parsedFile = new ParsedFile(fileInfo);
 
-        parsedFileService.parseFile(parsedFile);
+        parsedFileService.parseFile(filePath, parsedFile);
 
         assertNotNull(parsedFile.getHeader());
         assertNotEquals(parsedFile.getHeader(), ParsedFile.Element.Empty);
@@ -46,19 +45,6 @@ public class ParseFileServiceTest {
         assertEquals("image/jpg", parsedFile.getCover().getCoverType());
         assertEquals(20, parsedFile.getNotesCount());
         assertEquals(3, parsedFile.getCommentsCount());
-
-//        System.out.println(parsedFile.getHeader());
-//        System.out.println(parsedFile.getSection());
-//        System.out.println(parsedFile.getNotesCount());
-//        System.out.println(parsedFile.getCommentsCount());
-//
-//
-//        try (FileOutputStream stream = new FileOutputStream("c:\\temp\\111")) {
-//            stream.write(parsedFile.getCover().getBytes());
-//            stream.flush();
-//        }
-//
-
     }
 
 }
