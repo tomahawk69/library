@@ -8,14 +8,15 @@ import java.util.*;
 public class ParsedFile {
 
     @Id
-    private String id;
+    private String path;
 
     private ProcessState state = ProcessState.None;
-    private FileInfo fileInfo;
 
+    private FileInfo fileInfo;
     private Element header = Element.Empty;
     private Section section = Section.Empty;
     private Cover cover = new Cover();
+
     private int notesCount;
     private int commentsCount;
 
@@ -26,10 +27,12 @@ public class ParsedFile {
     }
 
     public ParsedFile(String path) {
+        this.path = path;
         this.fileInfo = new FileInfo(path);
     }
 
     public ParsedFile(FileInfo fileInfo) {
+        this.path = fileInfo.getPath();
         this.fileInfo = fileInfo;
     }
 
