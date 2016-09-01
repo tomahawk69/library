@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.library.common.entities.FileType;
 import org.library.common.entities.Library;
 import org.library.common.entities.ParsedFile;
+import org.library.common.entities.ParsedFilesStatus;
 import org.library.common.services.FileService;
 import org.library.common.services.ParseFileService;
 import org.library.common.services.SemaphoreService;
@@ -28,7 +29,6 @@ public class ParserImpl implements Parser {
     private final ParserStorageService parserStorageService;
     private List<String> allowedExtensions;
     private boolean calcMD5hash;
-    private Library library;
 
     ParserImpl(FileService fileService, ParseFileService parseFileService, SemaphoreService semaphoreService, ParserStorageService parserStorageService, Path path) {
         this.path = path;
@@ -41,37 +41,100 @@ public class ParserImpl implements Parser {
     @Override
     public Boolean call() throws Exception {
         Boolean result = true;
-        registerLibrary(path);
-        ExecutorService serviceIO = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
-        List<CompletableFuture<ParsedFile>> futures =
-                getFilesList().parallelStream()
-                        .map(p ->  parseFileService.pathToParsedFile(path, p))
-                        .map(pf -> CompletableFuture.supplyAsync(() -> updateFileInfo(library, pf), serviceIO))
-                        .map(fi -> fi.thenApplyAsync((pf) -> parseXML(library, pf), serviceIO))
-                        .map(fs -> fs.thenApplyAsync(this::saveParsedFiled, serviceIO))
-                        .collect(Collectors.toList());
-        List<ParsedFile> parsedFiles = allDone(futures).join();
-        serviceIO.shutdown();
-        serviceIO.awaitTermination(1, TimeUnit.SECONDS);
-        LOGGER.info("Parsed files: " + parsedFiles.size());
-        LOGGER.info("Erroneous: " + parsedFiles.stream().filter(p -> p.getException() != null).count());
+        Library library = registerLibrary(path);
+        List<Path> files = getFilesList();
+        ParsedFilesStatus status = new ParsedFilesStatus(files.size());
+        proceedFiles(library, status, files);
         return result;
     }
 
-    private ParsedFile saveParsedFiled(ParsedFile parsedFile) {
+    private void proceedFiles(Library library, ParsedFilesStatus status, List<Path> files) {
+        LOGGER.info("Starting processing files: " + files.size());
+        ExecutorService serviceI1 = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
+        ExecutorService serviceI2 = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
+        ExecutorService serviceO = Executors.newFixedThreadPool(semaphoreService.getMaxFilesThreadsCount());
+        ExecutorService serviceInMemory = Executors.newFixedThreadPool(semaphoreService.getMaxAccessThreadsCount());
+        List<CompletableFuture<ParsedFile>> futures =
+                files.parallelStream()
+                        .map(p -> parseFileService.pathToParsedFile(path, p))
+                        .map(pf -> CompletableFuture.supplyAsync(() -> updateFileInfo(library, pf, status), serviceI1))
+                        .map(fi -> fi.thenApplyAsync((pf) -> parseXML(library, pf, status), serviceI2))
+                        .map(fi -> fi.thenApplyAsync((pf) -> parseInfo(library, pf, status), serviceInMemory))
+                        .map(fs -> fs.thenApplyAsync((pf) -> saveParsedFiled(library, pf, status), serviceO))
+                        .collect(Collectors.toList());
+        List<ParsedFile> parsedFiles = allDone(futures).join();
+        serviceI1.shutdown();
+        serviceI2.shutdown();
+        serviceO.shutdown();
+        serviceInMemory.shutdown();
         try {
-            parserStorageService.saveParsedFile(library, parsedFile);
+            serviceI1.awaitTermination(1, TimeUnit.SECONDS);
+            serviceI2.awaitTermination(1, TimeUnit.SECONDS);
+            serviceO.awaitTermination(1, TimeUnit.SECONDS);
+            serviceInMemory.awaitTermination(1, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            LOGGER.error("serviceIO awaitTermination error");
+        }
+        LOGGER.info("Files processed: " + parsedFiles.size());
+        LOGGER.info("Erroneous: " + parsedFiles.stream().filter(p -> p.getException() != null).count());
+    }
+
+    private ParsedFile parseInfo(Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
+        try {
+
+            status.getInfoParsedCount().increment();
+            displayInfo(status);
         } catch (Exception e) {
             parsedFile.addException(e);
         }
         return parsedFile;
     }
 
-    private void registerLibrary(Path path) {
+    private ParsedFile saveParsedFiled(Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
+        try {
+            parserStorageService.saveParsedFile(library, parsedFile);
+            status.getSavedCount().increment();
+            displayInfo(status);
+        } catch (Exception e) {
+            parsedFile.addException(e);
+        }
+        return parsedFile;
+    }
+
+    private ParsedFile parseXML(final Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
+        semaphoreService.acquireFilesAccess();
+        try {
+            parseFileService.parseFile(Paths.get(library.getPath()), parsedFile);
+            status.getXmlParsedCount().increment();
+            displayInfo(status);
+        } catch (Exception ex) {
+            parsedFile.addException(ex);
+        } finally {
+            semaphoreService.releaseFilesAccess();
+        }
+        return parsedFile;
+    }
+
+    public ParsedFile updateFileInfo(final Library library, final ParsedFile parsedFile, ParsedFilesStatus status) {
+        semaphoreService.acquireFilesAccess();
+        try {
+            FileInfoHelper.updateFileInfo(Paths.get(library.getPath()), parsedFile.getFileInfo(), calcMD5hash);
+            status.getFileInfoUpdatedCount().increment();
+            displayInfo(status);
+        } catch (Exception e) {
+            LOGGER.error("Cannot update file info " + parsedFile.getFileInfo(), e);
+        } finally {
+            semaphoreService.releaseFilesAccess();
+        }
+        return parsedFile;
+    }
+
+    private Library registerLibrary(Path path) {
         LOGGER.debug("Registering library " + path);
         parserStorageService.initLibrary(path.toString());
-        library = parserStorageService.registerLibrary(path.toString());
+        Library library = parserStorageService.registerLibrary(path.toString());
         LOGGER.debug("Registered library " + library);
+        return library;
     }
 
     private <ParsedFile> CompletableFuture<List<ParsedFile>> allDone(List<CompletableFuture<ParsedFile>> futures) {
@@ -101,34 +164,15 @@ public class ParserImpl implements Parser {
         this.allowedExtensions = allowedExtensions;
     }
 
+
     public void setCalcMD5hash(boolean calcMD5hash) {
         this.calcMD5hash = calcMD5hash;
     }
 
-    public ParsedFile updateFileInfo(final Library library, final ParsedFile parsedFile) {
-        semaphoreService.acquireFilesAccess();
-        try {
-            FileInfoHelper.updateFileInfo(Paths.get(library.getPath()), parsedFile.getFileInfo(), calcMD5hash);
-        } catch (Exception e) {
-            LOGGER.error("Cannot update file info " + parsedFile.getFileInfo(), e);
-        } finally {
-            semaphoreService.releaseFilesAccess();
-        }
-        return parsedFile;
+    private void displayInfo(ParsedFilesStatus status) {
+        LOGGER.debug(status);
     }
 
-
-    private ParsedFile parseXML(final Library library, ParsedFile parsedFile) {
-        semaphoreService.acquireFilesAccess();
-        try {
-            parseFileService.parseFile(Paths.get(library.getPath()), parsedFile);
-        } catch (Exception ex) {
-            parsedFile.addException(ex);
-        } finally {
-            semaphoreService.releaseFilesAccess();
-        }
-        return parsedFile;
-    }
 
     @Override
     public String toString() {
