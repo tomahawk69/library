@@ -98,4 +98,5 @@ public class FileInfo {
                 ", md5Hash='" + md5Hash + '\'' +
                 '}';
     }
+
 }

@@ -58,7 +58,7 @@ public class ParserImpl implements Parser {
                 files.parallelStream()
                         .map(p -> parseFileService.pathToParsedFile(path, p))
                         .map(pf -> CompletableFuture.supplyAsync(() -> updateFileInfo(library, pf, status), serviceI1))
-                        .map(fi -> fi.thenApplyAsync((pf) -> parseXML(library, pf, status), serviceI2))
+                        .map(fi -> fi.thenApplyAsync((pf) -> parseFile(library, pf, status), serviceI2))
                         .map(fi -> fi.thenApplyAsync((pf) -> parseInfo(library, pf, status), serviceInMemory))
                         .map(fs -> fs.thenApplyAsync((pf) -> saveParsedFiled(library, pf, status), serviceO))
                         .collect(Collectors.toList());
@@ -79,17 +79,6 @@ public class ParserImpl implements Parser {
         LOGGER.info("Erroneous: " + parsedFiles.stream().filter(p -> p.getException() != null).count());
     }
 
-    private ParsedFile parseInfo(Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
-        try {
-
-            status.getInfoParsedCount().increment();
-            displayInfo(status);
-        } catch (Exception e) {
-            parsedFile.addException(e);
-        }
-        return parsedFile;
-    }
-
     private ParsedFile saveParsedFiled(Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
         try {
             parserStorageService.saveParsedFile(library, parsedFile);
@@ -101,7 +90,7 @@ public class ParserImpl implements Parser {
         return parsedFile;
     }
 
-    private ParsedFile parseXML(final Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
+    private ParsedFile parseFile(final Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
         semaphoreService.acquireFilesAccess();
         try {
             parseFileService.parseFile(Paths.get(library.getPath()), parsedFile);
@@ -111,6 +100,18 @@ public class ParserImpl implements Parser {
             parsedFile.addException(ex);
         } finally {
             semaphoreService.releaseFilesAccess();
+        }
+        return parsedFile;
+    }
+
+    private ParsedFile parseInfo(Library library, ParsedFile parsedFile, ParsedFilesStatus status) {
+        try {
+            parseFileService.parseInfo(parsedFile);
+
+            status.getInfoParsedCount().increment();
+            displayInfo(status);
+        } catch (Exception e) {
+            parsedFile.addException(e);
         }
         return parsedFile;
     }

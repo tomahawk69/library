@@ -37,9 +37,9 @@ public class Fb2ParseHandlerTest {
         ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
-        ParsedFile.Element element = new ParsedFile.Element("image");
+        ParsedFile.Element element = new ParsedFile.TagElement("image");
         String imageLink = "link to the image";
-        element.addAttribute("href", imageLink);
+        ParsedFiles.addAttribute(element, "href", imageLink);
         assertTrue(handler.checkIsCover(element));
         assertEquals(handler.getCoverName(), imageLink);
     }
@@ -50,7 +50,7 @@ public class Fb2ParseHandlerTest {
         ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
-        ParsedFile.Element element = new ParsedFile.Element("image");
+        ParsedFile.Element element = new ParsedFile.TagElement("image");
         assertFalse(handler.checkIsCover(element));
     }
 
@@ -60,7 +60,7 @@ public class Fb2ParseHandlerTest {
         ParsedFile parsedFile = new ParsedFile(fileInfo);
         Fb2ParserHandler handler = new Fb2ParserHandler(parsedFile);
         handler.setStage(ParseStage.Head);
-        ParsedFile.Element element = new ParsedFile.Element("other then");
+        ParsedFile.Element element = new ParsedFile.TagElement("other then");
         assertFalse(handler.checkIsCover(element));
     }
 

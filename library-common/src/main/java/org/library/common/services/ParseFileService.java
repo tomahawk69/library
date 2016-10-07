@@ -34,10 +34,28 @@ public class ParseFileService {
         boolean result = false;
         try {
             FileParser parser = FileParser.createHandler(parsedFile.getFileInfo().getFileType());
-            result = parser.parse(basePath, parsedFile);
+            result = parser.parseFile(basePath, parsedFile);
         } catch (IllegalArgumentException ex) {
             parsedFile.addException(ex);
-            LOGGER.error("Cannot parse file " +  parsedFile.getFileInfo().getPath());
+            LOGGER.error("Cannot parseFile file " + parsedFile.getFileInfo().getPath());
+        }
+        return result;
+    }
+
+    public void parseInfo(ParsedFile parsedFile) {
+        if (parseFileInfoInt(parsedFile)) {
+            parsedFile.setState(ParsedFile.ProcessState.BookInfoProcessed);
+        }
+    }
+
+    private boolean parseFileInfoInt(ParsedFile parsedFile) {
+        boolean result = false;
+        try {
+            FileParser parser = FileParser.createHandler(parsedFile.getFileInfo().getFileType());
+            result = parser.parseFileData(parsedFile);
+        } catch (IllegalArgumentException ex) {
+            parsedFile.addException(ex);
+            LOGGER.error("Cannot parseFileInfo for " + parsedFile.getFileInfo().getPath());
         }
         return result;
     }

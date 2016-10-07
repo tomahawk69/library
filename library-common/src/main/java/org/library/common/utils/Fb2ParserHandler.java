@@ -9,7 +9,6 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.LongAdder;
 
 import static org.library.common.utils.ParseStage.*;
 
@@ -28,16 +27,16 @@ import static org.library.common.utils.ParseStage.*;
  * - notes and comments don't any validation for empty or head sections
  * - section titles doesn't support strip or resolve links to notes/comments
  */
-public class Fb2ParserHandler extends DefaultHandler {
+class Fb2ParserHandler extends DefaultHandler {
     private static final List<String> newLineTitles = Arrays.asList("p", "empty-line");
 
-    public static final String TAG_IMAGE_CONTENT_TYPE = "content-type";
-    public static final String TAG_ELEMENT_ID = "id";
-    public static final String TAG_ELEMENT_NAME = "name";
-    public static final String TAG_SECTION_TITLE = "title";
-    public static final String TAG_SECTION = "section";
-    public static final String TAG_IMAGE_LINK = "href";
-    public static final String TAG_IMAGE = "image";
+    private static final String TAG_IMAGE_CONTENT_TYPE = "content-type";
+    private static final String TAG_ELEMENT_ID = "id";
+    private static final String TAG_ELEMENT_NAME = "name";
+    private static final String TAG_SECTION_TITLE = "title";
+    private static final String TAG_SECTION = "section";
+    private static final String TAG_IMAGE_LINK = "href";
+    private static final String TAG_IMAGE = "image";
 
     private final ParsedFile parsedFile;
     private ParseStage stage = ParseStage.None;
@@ -58,7 +57,7 @@ public class Fb2ParserHandler extends DefaultHandler {
     private StringBuilder cover = new StringBuilder();
     private String nameSpace;
 
-    public Fb2ParserHandler(ParsedFile parsedFile) {
+    Fb2ParserHandler(ParsedFile parsedFile) {
         this.parsedFile = parsedFile;
     }
 
@@ -88,7 +87,7 @@ public class Fb2ParserHandler extends DefaultHandler {
                 if (qName.equalsIgnoreCase(ParseStage.Head.getElementTag())) {
                     if (!isHead) {
                         setStage(Head);
-                        currentElement = new ParsedFile.Element("header");
+                        currentElement = new ParsedFile.TagElement("header");
                         parsedFile.setHeader(currentElement);
                         proceedAttributes(currentElement, attributes);
                         isHead = true;
@@ -134,7 +133,7 @@ public class Fb2ParserHandler extends DefaultHandler {
                 break;
             }
             case Head: {
-                currentElement = ParsedFiles.addElement(currentElement, qName);
+                currentElement = ParsedFiles.addTagElement(currentElement, qName);
                 proceedAttributes(currentElement, attributes);
                 isCoverExists = isCoverExists || checkIsCover(currentElement);
                 break;
@@ -219,14 +218,18 @@ public class Fb2ParserHandler extends DefaultHandler {
 
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
+        String value;
         switch (stage) {
             case Head:
-                currentElement.setValue(String.valueOf(Arrays.copyOfRange(ch, start, start + length)).trim());
+                value = String.valueOf(Arrays.copyOfRange(ch, start, start + length));
+                if (value != null && !value.trim().isEmpty()) {
+                    ParsedFiles.addTextElement(currentElement, value);
+                }
                 break;
             case Body:
                 if (isSectionTitle && currentTag != null && !currentTag.equalsIgnoreCase(TAG_SECTION_TITLE)) {
-                    String value = String.valueOf(Arrays.copyOfRange(ch, start, start + length));
-                    if (value.length() > 0) {
+                    value = String.valueOf(Arrays.copyOfRange(ch, start, start + length));
+                    if (value != null && !value.trim().isEmpty()) {
                         currentSection.setTitle(value);
                     }
                 }
@@ -255,7 +258,7 @@ public class Fb2ParserHandler extends DefaultHandler {
 
     boolean checkIsCover(ParsedFile.Element currentElement) {
         if (currentElement.getName().equalsIgnoreCase(TAG_IMAGE)) {
-            String temp = currentElement.getAttribute(TAG_IMAGE_LINK);
+            String temp = ((ParsedFile.TagElement) currentElement).getAttribute(TAG_IMAGE_LINK);
             if (temp != null && temp.length() > 0) {
                 if (temp.substring(0, 1).equals("#")) {
                     temp = temp.substring(1);
@@ -267,7 +270,7 @@ public class Fb2ParserHandler extends DefaultHandler {
         return false;
     }
 
-    void proceedAttributes(ParsedFile.Element element, Attributes attributes) {
+    private void proceedAttributes(ParsedFile.Element element, Attributes attributes) {
         if (attributes.getLength() > 0) {
             for (int i = 0; i < attributes.getLength(); i++) {
                 ParsedFiles.addAttribute(element, normalizeAttributeName(attributes.getQName(i)), attributes.getValue(i));
@@ -275,7 +278,7 @@ public class Fb2ParserHandler extends DefaultHandler {
         }
     }
 
-    String normalizeAttributeName(String qName) {
+    private String normalizeAttributeName(String qName) {
         if (nameSpace != null) {
             int i = qName.indexOf(nameSpace + ":");
             if (i == 0) {
@@ -285,11 +288,11 @@ public class Fb2ParserHandler extends DefaultHandler {
         return qName;
     }
 
-    public void setStage(ParseStage stage) {
+    void setStage(ParseStage stage) {
         this.stage = stage;
     }
 
-    public String getCoverName() {
+    String getCoverName() {
         return coverName;
     }
 

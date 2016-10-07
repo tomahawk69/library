@@ -4,6 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class ParsedFile {
 
@@ -13,6 +14,7 @@ public class ParsedFile {
     private ProcessState state = ProcessState.None;
 
     private FileInfo fileInfo;
+    private BookInfo bookInfo;
     private Element header = Element.Empty;
     private Section section = Section.Empty;
     private Cover cover = new Cover();
@@ -29,11 +31,13 @@ public class ParsedFile {
     public ParsedFile(String path) {
         this.path = path;
         this.fileInfo = new FileInfo(path);
+        this.bookInfo = new BookInfo();
     }
 
     public ParsedFile(FileInfo fileInfo) {
         this.path = fileInfo.getPath();
         this.fileInfo = fileInfo;
+        this.bookInfo = new BookInfo();
     }
 
     public ProcessState getState() {
@@ -111,22 +115,18 @@ public class ParsedFile {
         return exception;
     }
 
-    public static class Element {
-        public static Element Empty = new Element(null);
+    public BookInfo getBookInfo() {
+        return bookInfo;
+    }
 
-        private final String name;
-        private List<Element> elements = new ArrayList<>();
-        private String value;
+    public static class Element implements Iterable<Element> {
+        protected String name;
+        public static Element Empty = new Element();
+
         @Transient
         private Element parent;
-        private Map<String, String> attributes = new HashMap<>();
 
-        public Element(String name) {
-            this.name = name;
-        }
-
-        public void addElement(Element element) {
-            elements.add(element);
+        public Element() {
         }
 
         public void setParent(Element parent) {
@@ -137,12 +137,51 @@ public class ParsedFile {
             return parent;
         }
 
-        public void setValue(String value) {
-            this.value = value;
-        }
-
         public String getName() {
             return name;
+        }
+
+        @Override
+        public Iterator<Element> iterator() {
+            return Collections.emptyIterator();
+        }
+
+        public Stream<Element> stream() {
+            return Stream.empty();
+        }
+    }
+
+    public static class TextElement extends Element {
+        private final String text;
+
+        public TextElement(String text) {
+            super();
+            this.text = text;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        @Override
+        public String toString() {
+            return "TextElement{" +
+                    "text='" + text + '\'' +
+                    '}';
+        }
+    }
+
+    public static class TagElement extends Element {
+        private List<Element> elements = new ArrayList<>();
+        private Map<String, String> attributes = new HashMap<>();
+
+        public TagElement(String name) {
+            super();
+            this.name = name;
+        }
+
+        public void addElement(Element element) {
+            elements.add(element);
         }
 
         public void addAttribute(String key, String value) {
@@ -158,9 +197,18 @@ public class ParsedFile {
             return "Element{" +
                     "name='" + name + '\'' +
                     ", elements=" + elements +
-                    ", value='" + value + '\'' +
                     ", attributes=" + attributes +
                     '}';
+        }
+
+        @Override
+        public Iterator<Element> iterator() {
+            return elements.iterator();
+        }
+
+        @Override
+        public Stream<Element> stream() {
+            return elements.stream();
         }
     }
 
@@ -176,6 +224,7 @@ public class ParsedFile {
 
         /**
          * Create new item in the titles list
+         *
          * @param title item to add
          */
         public void addTitle(String title) {
@@ -184,6 +233,7 @@ public class ParsedFile {
 
         /**
          * Append new item in the titles list
+         *
          * @param title item to append
          */
         public void setTitle(String title) {
@@ -246,6 +296,7 @@ public class ParsedFile {
         return "ParsedFile{" +
                 "state=" + state +
                 ", fileInfo=" + fileInfo +
+                ", fileInfo=" + bookInfo +
                 ", header=" + header +
                 ", section=" + section +
                 ", cover=" + cover +
@@ -255,7 +306,7 @@ public class ParsedFile {
     }
 
     public enum ProcessState {
-        None, XMLProcessed
+        None, XMLProcessed, BookInfoProcessed
     }
 
     public class Cover {
